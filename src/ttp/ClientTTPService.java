@@ -13,7 +13,7 @@ import datatypes.Datagram;
 import services.DatagramService;
 
 public class ClientTTPService implements Runnable{
-	private static DatagramService listenService;
+	
 	private static DatagramService dataService;
 	private static DatagramService clientService;
 	private final int LISTENER_MAX = 10; 
@@ -24,7 +24,7 @@ public class ClientTTPService implements Runnable{
 	private int hisACK;// ack I should reply to him now
 	private ConcurrentLinkedQueue<Datagram> request_queue;
 	private ConcurrentLinkedQueue<Datagram> data_queue;
-	private HashMap<Integer,ConDescriptor> active_connections;//record for active connections
+	
 	private int mySYN;
 	private int myACK;// my coming ack is everything is good
 	private char ID;
@@ -76,47 +76,8 @@ public class ClientTTPService implements Runnable{
  	 *	Host B receives ACK. 
 	 *	TCP socket connection is ESTABLISHED.
 	 
-	public void startCon(String srcIp, String dstIp, 
-		short srcPort, short dstPort){
-		datagram = new Datagram(srcIp, dstIp, srcPort, dstPort);
-		
-	}
-	*/
 	
-	/*
-	 * server open port to queue incoming requests , race condition?
-	 */
-	public void serverListen(int port){
-		try{
-			listenService = new DatagramService(port, 10);
-			System.out.println("server listening on port  "+port );
-			while(true){
-				
-				datagram = listenService.receiveDatagram();//a new thread to handle? incoming queue?
-				if( ( (TTP) datagram.getData()).isSYN() ){
-				System.out.println("add to SYN queue: received SYN  from ip "+ datagram.getSrcaddr() + ":" + datagram.getSrcport() + " Data: " + datagram.getData());
-			    request_queue.add(datagram);
-				}
-				else {
-					
-					System.out.println("add to data queue: received data from ip "+ datagram.getSrcaddr() + ":" + datagram.getSrcport() + " Data: " + datagram.getData());
-				    data_queue.add(datagram);
-				}
-					
-			}
-		}
-		catch(Exception e){
-			e.printStackTrace();
-			
-		}
-		finally{
-			listenService.close();
-		}
-		
-	}
-	/*
-	 * client initialize a connection
-	 */
+	*/
 	public void clientCon(int clientport, int ACK,  Object data, short length){
 		TTP ttpSYN = new TTP(ACK, 1, data, length);// a SYN packet
 		short size = 0;//size of datagram , to do
@@ -159,59 +120,7 @@ public class ClientTTPService implements Runnable{
 	}
 	
 	
-	/*
-	 * server side open a socket to accept clients' connections
-	 * it should handle multiple coming request, queue them, has a limit of queue size
-	 * which limit the number of connection queued , after which the socket refuse to queue, when this happens
-	 * tcp ignore coming requests, queued request are made available when calling accept
-	 * In other words, accept returns a new socket through which the server can communicate with the newly connected client. The old socket (on which accept was called)
-	 *  stays open, on the same port, listening for new connections
-	 * to do: queue?? avoid race// add lock new thread to do this?
-	 */
-	public Datagram serverAccept() throws IOException, ClassNotFoundException{
-		    if(request_queue.isEmpty())
-		    	return null;
-	        Datagram datagram = request_queue.peek();//should not be removed before success
-	        
-	        // assume all in order, to change for error handling
-			
-			
-			TTP ttp =(TTP) datagram.getData();
-			hisSYN = ttp.getSYN();//error handling , to do
-			hisACK += hisSYN +1 ; // next expected syn is ack
-			mySYN = 0;//random syn , to do
-			Datagram ack = constructACK(hisACK, mySYN);// return SYN + ACK, to do
-			listenService.sendDatagram(ack);// send SYN+ACK
-			datagram = listenService.receiveDatagram();// ideal no error handling, time out, what if droped, to do
-			System.out.println("received ACK request from ip "+ datagram.getSrcaddr() + ":" + datagram.getSrcport() + " Data: " + datagram.getData());
-			ttp =(TTP) datagram.getData();
-			// open a new socket to processTTP and release the listen socket for other requests
-			myACK = ttp.getACK();
-			request_queue.remove(); // can remove head from queue now
-			return datagram;
-		//}
-	}
- /*
-  * to do
-  * read received ttp payload, pass data to upper layer, update ACK and SYN
-  */
-	private Object readTTP(TTP ttp) {
-		// TODO Auto-generated method stub  update ack and syn
-		hisSYN = ttp.getSYN();
-		hisACK = hisSYN + ttp.getLength()+1;
-		mySYN = ttp.getACK();
-		
-		return ttp.getData();
-	}
-
-	/*
-	 * close datagram services
-	 */
-	public void closeService(){
-		listenService.close();
-		dataService.close();
-		System.out.println("ttp service closed");
-	}
+	
 	/*
 	 * to be changed
 	 * construct response ack
@@ -271,6 +180,18 @@ public class ClientTTPService implements Runnable{
 		readTTP(ttp);
 	}
 	
+	/*
+	  * to do
+	  * read received ttp payload, pass data to upper layer, update ACK and SYN
+	  */
+		private Object readTTP(TTP ttp) {
+			// TODO Auto-generated method stub  update ack and syn
+			hisSYN = ttp.getSYN();
+			hisACK = hisSYN + ttp.getLength()+1;
+			mySYN = ttp.getACK();
+			
+			return ttp.getData();
+		}
 	/*
 	 * to handle multiple connection simultaneously
 	 */

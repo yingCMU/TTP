@@ -8,14 +8,15 @@ import java.io.IOException;
 import java.net.SocketException;
 
 import services.DatagramService;
+import ttp.ClientTTPService;
 import ttp.TTP;
 import ttp.ServerTTPService;
 import datatypes.Datagram;
 
 public class TTPclient {
 
-	private static DatagramService ds;
-	private static ServerTTPService ttps;
+	//private static DatagramService ds;
+	private static ClientTTPService ttps;
 	
 	/**
 	 * @param args
@@ -52,7 +53,7 @@ public class TTPclient {
 		 * TTPService(short srcport, short dstport, String dstaddr)
 		 */
 		System.out.println("ttp service dstport "+dstport);
-		ttps = new ServerTTPService((short) srcport,(short)dstport, "localhost");
+		ttps = new ClientTTPService((short) srcport,(short)dstport, "localhost");
 		ttps.clientCon(srcport, 1, ttp,ttp.getLength());
 		System.out.println("Sent SYN");
 		

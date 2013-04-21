@@ -114,50 +114,6 @@ public class ServerTTPService implements Runnable{
 		}
 		
 	}
-	/*
-	 * client initialize a connection
-	 */
-	public void clientCon(int clientport, int ACK,  Object data, short length){
-		TTP ttpSYN = new TTP(ACK, 1, data, length);// a SYN packet
-		short size = 0;//size of datagram , to do
-		short checksum = ttpSYN.getCheckSum();
-		try {
-			clientService = new DatagramService(clientport, 10);
-			/*
-			 * Datagram(String srcaddr, String dstaddr, short srcport,
-			short dstport, short size, short checksum, Object data)
-			 */
-			
-			Datagram datagram = new Datagram(srcaddr,dstaddr,srcport,dstport,size,checksum,ttpSYN);
-			
-			clientService.sendDatagram(datagram);
-			
-			datagram = clientService.receiveDatagram();//a new thread to handle? incoming queue?
-			if( ( (TTP) datagram.getData()).isACK() ){
-			System.out.println("3-way finished: received ACK from ip "+ datagram.getSrcaddr() + ":" 
-					+ datagram.getSrcport() + " Data: " + datagram.getData());
-		    
-			}
-			else{
-				System.out.println("clientcon: received invalid packet from ip "+ datagram.getSrcaddr() + ":" 
-						+ datagram.getSrcport());	
-			}
-			
-		} catch (SocketException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		finally{
-			clientService.close();
-		}
-	}
-	
 	
 	/*
 	 * server side open a socket to accept clients' connections
