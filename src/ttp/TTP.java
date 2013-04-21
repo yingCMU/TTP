@@ -136,6 +136,10 @@ public class TTP implements Serializable{
 	
 		return (SYN == 1);
 	}
+	public boolean isACK() {
+		
+		return (ACK == 1);
+	}
 	
 	public boolean isData(){
 		if ((flag ==0))

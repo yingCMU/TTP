@@ -24,6 +24,7 @@ import datatypes.Datagram;
 public class DatagramService {
 
 	private int port;
+	private String srcaddr;
 	private int verbose;
 	private DatagramSocket socket;
 
@@ -41,6 +42,21 @@ public class DatagramService {
 		
 	}
 
+	public DatagramService(String srcaddr,int port, int verbose) throws SocketException {
+		super();
+		this.srcaddr = srcaddr;
+		this.port = port;
+		this.verbose = verbose;
+       try{
+		socket = new DatagramSocket(port);
+       }
+       catch(BindException e){
+    	   e.printStackTrace();
+    	   System.out.println("port: "+port);
+       }
+		
+	}
+	
 	public void sendDatagram(Datagram datagram) throws IOException {
 
 		ByteArrayOutputStream bStream = new ByteArrayOutputStream(1500);

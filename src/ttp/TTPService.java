@@ -1,7 +1,9 @@
 package ttp;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -32,17 +34,31 @@ public class TTPService implements Runnable{
 	private String dstaddr;
 	private short srcport;
 	private short dstport;
+	private short win;
 	//private HashMap rec_buffer = new HashMao();// using go back n, not needed
 	public TTPService(short port) throws SocketException{
 		//udpService = new DatagramService(port, 10);
 		request_queue = new ConcurrentLinkedQueue<Datagram>();
-		data_queue = new ConcurrentLinkedQueue<Datagram>(win);
+		data_queue = new ConcurrentLinkedQueue<Datagram>();
 		
 	}
-	public TTPService(short dstport, String dstaddr) throws SocketException{
+	public TTPService(short srcport, short dstport, String dstaddr) throws SocketException{
 		//udpService = new DatagramService(port, 10);
 		this.dstaddr = dstaddr;
 		this.dstport = dstport;
+		try
+        {
+            InetAddress addr = InetAddress.getLocalHost();
+            String hostname = addr.getHostName();
+           // System.out.println(addr.getHostAddress());
+            //System.out.println(hostname);
+            this.srcport = srcport;
+    		this.srcaddr = addr.getHostAddress();
+        }catch(UnknownHostException e)
+        {
+             e.printStackTrace();
+        }
+		
 		request_queue = new ConcurrentLinkedQueue<Datagram>();
 		data_queue = new ConcurrentLinkedQueue<Datagram>();
 		
@@ -78,7 +94,7 @@ public class TTPService implements Runnable{
 				
 				datagram = listenService.receiveDatagram();//a new thread to handle? incoming queue?
 				if( ( (TTP) datagram.getData()).isSYN() ){
-				System.out.println("add to request queue: received SYN request from ip "+ datagram.getSrcaddr() + ":" + datagram.getSrcport() + " Data: " + datagram.getData());
+				System.out.println("add to SYN queue: received SYN  from ip "+ datagram.getSrcaddr() + ":" + datagram.getSrcport() + " Data: " + datagram.getData());
 			    request_queue.add(datagram);
 				}
 				else {
@@ -101,10 +117,10 @@ public class TTPService implements Runnable{
 	/*
 	 * client initialize a connection
 	 */
-	public void clientCon(int clientport, int ACK, int SYN, Object data, short length){
-		TTP ttp = new TTP(ACK, 1, data, length);// a SYN packet
+	public void clientCon(int clientport, int ACK,  Object data, short length){
+		TTP ttpSYN = new TTP(ACK, 1, data, length);// a SYN packet
 		short size = 0;//size of datagram , to do
-		short checksum = ttp.getCheckSum();
+		short checksum = ttpSYN.getCheckSum();
 		try {
 			clientService = new DatagramService(clientport, 10);
 			/*
@@ -112,12 +128,28 @@ public class TTPService implements Runnable{
 			short dstport, short size, short checksum, Object data)
 			 */
 			
-			Datagram datagram = new Datagram(dstaddr,dstport,size,checksum,ttp);
+			Datagram datagram = new Datagram(srcaddr,dstaddr,srcport,dstport,size,checksum,ttpSYN);
+			
 			clientService.sendDatagram(datagram);
+			
+			datagram = clientService.receiveDatagram();//a new thread to handle? incoming queue?
+			if( ( (TTP) datagram.getData()).isACK() ){
+			System.out.println("3-way finished: received ACK from ip "+ datagram.getSrcaddr() + ":" 
+					+ datagram.getSrcport() + " Data: " + datagram.getData());
+		    
+			}
+			else{
+				System.out.println("clientcon: received invalid packet from ip "+ datagram.getSrcaddr() + ":" 
+						+ datagram.getSrcport());	
+			}
+			
 		} catch (SocketException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -140,7 +172,8 @@ public class TTPService implements Runnable{
 		    if(request_queue.isEmpty())
 		    	return null;
 	        Datagram datagram = request_queue.peek();//should not be removed before success
-	        // assume all in order, to change
+	        
+	        // assume all in order, to change for error handling
 			
 			
 			TTP ttp =(TTP) datagram.getData();

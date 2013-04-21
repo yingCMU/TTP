@@ -1,5 +1,8 @@
 package ttp;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
 public class ConDescriptor {
 	private String srcaddr;
 	private String dstaddr;
@@ -25,6 +28,8 @@ public class ConDescriptor {
 		ConDescriptor a = new ConDescriptor("1","2", (short)3,(short)4);
 		ConDescriptor b= new ConDescriptor("1","2", (short)3,(short)4);
 		System.out.println(a.equals(b));
+		
+		
 		
 	}*/
 }

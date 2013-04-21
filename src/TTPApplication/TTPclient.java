@@ -49,12 +49,12 @@ public class TTPclient {
 		int dstport = (short)Integer.parseInt(args[1]);
 		
 		/*
-		 * TTPService(short dstport, String dstaddr)
+		 * TTPService(short srcport, short dstport, String dstaddr)
 		 */
 		System.out.println("ttp service dstport "+dstport);
-		ttps = new TTPService((short)dstport, "localhost");
-		ttps.clientCon(srcport, 1, 1,ttp,ttp.getLength());
-		System.out.println("Sent datagram");
+		ttps = new TTPService((short) srcport,(short)dstport, "localhost");
+		ttps.clientCon(srcport, 1, ttp,ttp.getLength());
+		System.out.println("Sent SYN");
 		
 		//datagram = ds.receiveDatagram();
 		//System.out.println("Received " + datagram.getData());

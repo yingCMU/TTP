@@ -32,7 +32,7 @@ public class client {
 		Datagram datagram = new Datagram();
 		datagram.setData("Hello World!");
 		datagram.setSrcaddr("128.237.123.88");
-		datagram.setDstaddr("128.237.123.88");
+		datagram.setDstaddr("localhost");
 		datagram.setDstport((short)Integer.parseInt(args[1]));
 		datagram.setSrcport((short)port);
 		
