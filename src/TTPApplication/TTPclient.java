@@ -9,13 +9,13 @@ import java.net.SocketException;
 
 import services.DatagramService;
 import ttp.TTP;
-import ttp.TTPService;
+import ttp.ServerTTPService;
 import datatypes.Datagram;
 
 public class TTPclient {
 
 	private static DatagramService ds;
-	private static TTPService ttps;
+	private static ServerTTPService ttps;
 	
 	/**
 	 * @param args
@@ -52,7 +52,7 @@ public class TTPclient {
 		 * TTPService(short srcport, short dstport, String dstaddr)
 		 */
 		System.out.println("ttp service dstport "+dstport);
-		ttps = new TTPService((short) srcport,(short)dstport, "localhost");
+		ttps = new ServerTTPService((short) srcport,(short)dstport, "localhost");
 		ttps.clientCon(srcport, 1, ttp,ttp.getLength());
 		System.out.println("Sent SYN");
 		

@@ -7,12 +7,12 @@ import java.io.IOException;
 import java.net.SocketException;
 
 import services.DatagramService;
-import ttp.TTPService;
+import ttp.ServerTTPService;
 import datatypes.Datagram;
 
 public class TTPserver {
 
-	private static TTPService service;
+	private static ServerTTPService service;
 	
 	public static void main(String[] args) throws IOException, ClassNotFoundException {
 
@@ -23,7 +23,7 @@ public class TTPserver {
 		System.out.println("Starting Server ...");
 		
 		int port = Integer.parseInt(args[0]);
-		service = new TTPService((short)port);
+		service = new ServerTTPService((short)port);
 		service.serverListen(port);
 		//run();
 	}

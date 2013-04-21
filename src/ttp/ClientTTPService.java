@@ -12,7 +12,7 @@ import datatypes.Datagram;
 
 import services.DatagramService;
 
-public class TTPService implements Runnable{
+public class ClientTTPService implements Runnable{
 	private static DatagramService listenService;
 	private static DatagramService dataService;
 	private static DatagramService clientService;
@@ -36,13 +36,13 @@ public class TTPService implements Runnable{
 	private short dstport;
 	private short win;
 	//private HashMap rec_buffer = new HashMao();// using go back n, not needed
-	public TTPService(short port) throws SocketException{
+	public ClientTTPService(short port) throws SocketException{
 		//udpService = new DatagramService(port, 10);
 		request_queue = new ConcurrentLinkedQueue<Datagram>();
 		data_queue = new ConcurrentLinkedQueue<Datagram>();
 		
 	}
-	public TTPService(short srcport, short dstport, String dstaddr) throws SocketException{
+	public ClientTTPService(short srcport, short dstport, String dstaddr) throws SocketException{
 		//udpService = new DatagramService(port, 10);
 		this.dstaddr = dstaddr;
 		this.dstport = dstport;
