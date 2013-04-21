@@ -1,0 +1,102 @@
+Since each connection is distinct, we must maintain data about each connection 
+separately. TCP uses a special data structure for this purpose, called a transmission
+ control block (TCB). The TCB contains all the important information about the
+  connection, such as the two socket numbers that identify it and pointers to buffers
+   where incoming and outgoing data are held. The TCB is also used to implement the
+    sliding window mechanism. It holds variables that keep track of the number of bytes
+     received and acknowledged, bytes received and not yet acknowledged, current window
+      size and so forth. Of course, each device maintains its own TCB for 
+the connection.
+
+Before the process of setting up a TCP connection can begin, the devices on each end 
+must perform some “prep work”. One of the tasks required to prepare for the connection
+ is to set up the TCB that will be used to hold information about it. This is done 
+ right at the very start of the connection
+ establishment process, when each device just transitions out of the CLOSED state.
+ 
+ A client process initiates a TCP connection by performing an active OPEN, sending a 
+ SYN message to a server. A server process using TCP prepares for an incoming connection
+  request by performing a passive OPEN. Both devices create for each TCP session a data 
+  structure used to hold
+  important data related to the connection, called a transmission control block (TCB).
+  
+  Preparation For Connection
+Both the client and the server create the TCB for the connection at the time that they 
+perform the OPEN. The client already knows the IP addresses and port numbers for both
+ the client process and the server process it is trying to reach, 
+ 
+ For the server, the concept of a TCB at this stage of the game is a bit more complex. If the server is in fact waiting for a particular client, it can identify the connection using its own socket and the socket of the client for which it is waiting. Normally, however, the server doesn't know what client is trying to reach it. In fact, it could be contacted by more than one client nearly at the same time.
+
+In this case, the server creates a TCB with an unspecified (zero) client socket number, and waits for an active OPEN to be received. It then binds the socket number of the client to the TCB for the passive OPEN as part of the connection process. To allow it to handle multiple incoming connections, the server process may in fact perform several unspecified passive OPENs simultaneously.
+
+The transmission control block for a connection is maintained throughout the connection and destroyed when the connection is completely terminated and the device returns to the CLOSED state. TCP does include a procedure to handle the situation where both devices perform an active OPEN simultaneously. This is discussed in more detail in the next topic on the connection establishment process.
+We have discussed in earlier topics in this section the connection orientation of TCP and its operation. Before TCP can be employed for any actually useful purpose—that is, sending data—a connection must be set up between the two devices that wish to communicate. This process, usually called connection establishment, involves an exchange of messages that transitions both devices from their initial connection state (CLOSED) to the normal operating state (ESTABLISHED).
+
+Connection Establishment Functions
+The connection establishment process actually accomplishes several things as it creates a connection suitable for data exchange:
+
+Contact and Communication: The client and server make contact with each other and establish communication by sending each other messages. The server usually doesn’t even know what client it will be talking to before this point, so it discovers this during connection establishment. 
+
+Sequence Number Synchronization: Each device lets the other know what initial sequence number it wants to use for its first transmission. 
+
+Parameter Exchange: Certain parameters that control the operation of the TCP connection are exchanged by the two devices.
+so it can use these to uniquely identify the connection and the TCB that goes with it.
+
+ A set of control flags in the TCP header indicates whether a segment is being used for control purposes or just to carry data.
+ 
+ 
+ SYN: This bit indicates that the segment is being used to initialize a connection. SYN stands for synchronize, in reference to the sequence number synchronization I mentioned above. 
+
+ACK: This bit indicates that the device sending the segment is conveying an acknowledgment for a message it has received (such as a SYN).
+
+You may recall from the TCP fundamentals section that TCP refers to each byte of data individually, and uses sequence numbers to keep track of which bytes have been sent and received. Since each byte has a sequence number, we can acknowledge each byte, or more efficiently, use a single number to acknowledge a range of bytes received.
+he Problem With Starting Every Connection Using the Same Sequence Number
+In the example I gave in the topic describing the sliding windows system, I assumed for “simplicity” (ha ha, was that simple?) that each device would start a connection by giving the first byte of data sent sequence number 1. A valid question is, why wouldn't we always just start off each TCP connection by sending the first byte of data with a sequence number of 1? The sequence numbers are arbitrary, after all, and this is the simplest method.
+
+
+The problem with starting off each connection with a sequence number of 1 is that it introduces the possibility of segments from different connections getting mixed up. Suppose we established a TCP connection and sent a segment containing bytes 1 through 30. However, there was a problem with the internetwork that caused this segment to be delayed, and eventually, the TCP connection itself to be terminated. We then started up a new connection and again used a starting sequence number of 1. As soon as this new connection was started, however, the old segment with bytes labeled 1 to 30 showed up. The other device would erroneously think those bytes were part of the new connection.
+
+This is but one of several similar problems that can occur. To avoid them, each TCP device, at the time a connection is initiated, chooses a 32-bit initial sequence number (ISN) for the connection. Each device has its own ISN, and they will normally not be the same.
+
+Selecting the Initial Sequence Number
+Traditionally, each device chose the ISN by making use of a timed counter, like a clock of sorts, that was incremented every 4 microseconds. This counter was initialized when TCP started up and then its value increased by 1 every 4 microseconds until it reached the largest 32-bit value possible (4,294,967,295) at which point it “wrapped around” to 0 and resumed incrementing. Any time a new connection is set up, the ISN was taken from the current value of this timer. Since it takes over 4 hours to count from 0 to 4,294,967,295 at 4 microseconds per increment, this virtually assured that each connection will not conflict with any previous ones.
+
+One issue with this method is that it makes ISNs predictable. A malicious person could write code to analyze ISNs and then predict the ISN of a subsequent TCP connection based on the ISNs used in earlier ones. This represents a security risk, which has been exploited in the past (such as in the case of the famous Mitnick attack). To defeat this, implementations now use a random number in their ISN selection process
+
+
+TCP Sequence Number Synchronization
+
+Once each device has chosen its ISN, it sends this value to the other device in the Sequence Number field in its initial SYN message. The device receiving the SYN responds with an ACK message acknowledging the SYN (which may also contain its own SYN, as in step #2 of the three-way handshake). In the ACK message, the Acknowledgment Number field is set to the value of the ISN received from the other device plus one. This represents the next sequence number the device expects to receive from its peer; the ISN actually thus represents the sequence number of the last byte received
+
+As part of the process of connection establishment, each of the two devices in a TCP connection informs the other of the sequence number it plans to use for its first data transmission by putting the preceding sequence number in the Sequence Number field of its SYN message. The other device confirms this by incrementing that value and putting it into the Acknowledgment Number field of its ACK, telling the other device that is the sequence number it is expecting for the first data transmission. This process is called sequence number synchronization.
+
+Here's a simplified example of the three-way handshake steps showing how this is done (see Figure 213 as well). I chose small ISNs for readability but remember that they can be any 32-bit number:
+
+
+With the connection now established, the client will send data whose first byte will be given sequence number 4,568. The server's first byte of data will be numbered 12,999.
+Connection Request By Client: The client chooses an ISN for its transmissions of 4,567. It sends a SYN with the Sequence Number field set to 4,567. 
+
+Acknowledgment and Connection Request By Server: The server chooses an ISN for its transmissions of 12,998. It receives the client's SYN. It sends a SYN+ACK with an Acknowledgment Number field value of 4,568 (one more than the client's ISN). This message has a Sequence Number field value of 12,998. 
+
+Acknowledgment By Client: The client sends an ACK with the Acknowledgment Number field set to 12,999. 
+
+
+Detecting Transmission Errors Using Checksums
+If the data gets where it needs to go but is corrupted and we do not detect the corruption, this is in some ways worse than it never showing up at all. To provide basic protection against errors in transmission, TCP includes a 16-bit Checksum field in its header. The idea behind a checksum is very straight-forward: take a string of data bytes and add them all together. Then send this sum with the data stream and have the receiver check the sum. In TCP, a special algorithm is used to calculate this checksum by the device sending the segment; the same algorithm is then employed by the recipient to check the data it received and ensure that there were no errors.
+
+The checksum calculation used by TCP is a bit different than a regular checksum algorithm. A conventional checksum is performed over all the bytes that the checksum is intended to protect, and can detect most bit errors in any of those fields. The designers of TCP wanted this bit error protection, but also desired to protect against other type of problems.
+
+Instead of computing the checksum over only the actual data fields of the TCP segment, a 12-byte TCP pseudo header is created prior to checksum calculation. This header contains important information taken from fields in both the TCP header and the IP datagram into which the TCP segment will be encapsulated. The TCP pseudo header has the format shown in Table 158 and Figure 217.
+
+The Checksum field is itself part of the TCP header and thus one of the fields over which the checksum is calculated, creating a “chicken and egg” situation of sorts. This field is assumed to be all zeroes during calculation of the checksum.
+
+TCP checksums are computed over not just the TCP segment but also over a TCP pseudo header that contains the length of the TCP segment as well as the IP Source Address, Destination Address and Protocol fields. Since these fields are part of the checksum, if the segment is received by the wrong device, or has the incorrect Protocol field or segment length, it will be rejected. The technique is clever because the checksum can provide this protection even though the pseudo header itself is not actually transmitted.
+
+
+Local socket address: Local IP address and port number
+Reliability: Ensuring that data that is sent actually arrives at its destination, and if not, detecting this and re-sending the data. 
+
+Instead, the designers of TCP took the very smart approach of generalizing TCP so it could accept application data of any size and structure, without requiring that it be in discrete pieces. More specifically, TCP is said to treat data coming from an application as a stream; thus, the description of TCP as stream-oriented. Each application sends the data it wishes to transmit as a steady stream of octets (bytes). It doesn't need to carve them into blocks, or worry about how lengthy streams will get across the internetwork. It just “pumps bytes” to TCP.
+
+
+Remote socket address: Only for established TCP sockets. As discussed in the client-server section below, this is necessary since a TCP server may serve several clients concurrently. The server creates one socket for each client, and these sockets share the same local socket address.

@@ -1,0 +1,51 @@
+When using a Socket class one is establishing a TCP connection to a server on some port, but on the server the ServerSocket is capable of handling multiple client connections for each accept request and delegate it to a thread to server the request. But how is it possible for a ServerSocket class to accept multiple tcp connections on the same port.
+
+
+accept()
+When an application is listening for stream-oriented connections from other hosts, it is notified of such events (cf. select() function) and must initialize the connection using the accept() function. The accept() function creates a new socket for each connection and removes the connection from the listen queue. It takes the following arguments:
+
+sockfd, the descriptor of the listening socket that has the connection queued.
+cliaddr, a pointer to a sockaddr structure to receive the client's address information.
+addrlen, a pointer to a socklen_t location that specifies the size of the client address structure passed to accept(). When accept() returns, this location indicates how many bytes of the structure were actually used.
+The accept() function returns the new socket descriptor for the accepted connection, or -1 if an error occurs. All further communication with the remote host now occurs via this new socket.
+
+Datagram sockets do not require processing by accept() since the receiver may immediately respond to the request using the listening socket.
+
+Prototype
+int accept(int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen);
+
+
+A TCP connection is defined by a unique set of (source IP, source port, dest IP, dest port). Since the server binds to a particular port, it defines two of those 4 variables. As long as the clients all come from different IPs and/or different ports, it won't be an issue.
+
+
+A connection (aka a Socket between a client and a server isn't only identified by the ServerIP/ServerPort, it's identified with ClientIP/ClientPort/ServerIP/ServerPort.
+
+You only have to accept connections (and usually treat them in different threads).
+
+
+
+A TCP connection is uniquely identified by two (IP address, TCP port) tuples (one for each endpoint). So by definition, one can't move a port or IP address of a connection but just open a different one.
+
+If the server binds to port 28081 all accepted connections will have this port on the server side (although they most likely will have varying port numbers on the client side).
+
+For example, if two processes from the same client machine will connect to the same server, the IP address and TCP port on the server side will be the same for both connections. On the client side however, they will have two different port numbers allowing the operating system on both sides to uniquely identify which process and file descriptor the received TCP packets should be assigned to.
+
+
+When the client opens a new connection to the server's port 28081, it makes sure it uses a source port address it hasn't used yet for the same server host and port. I.e. if you have a connection of client source port 40'000 to the server port 28081, the next connection could use source port 40'001 to the same server on port 28081. This ensures that both the client and the server know that this is a new connection because at least one of the four quantities (client IP address, client TCP port, server IP address, server TCP port)
+
+Yes, it stays on that port, though some protocols (FTP) might open a second connection on another port.
+
+TCP maintains status information regarding the connections it makes and is therefore a reliable protocol.
+
+TCP Sockets (or virtual ports) are used in TCP (and UDP) communication to identify unique end-to-end connections. They are called 'virtual ports' because a single physical connector can serve multiple connections.
+
+s. Each side of a socket connection uses its own port number, which does not change during the life of that connection. The port number and IP address together uniquely identify an endpoint. Together, two endpoints are considered a 'socket
+
+
+A different source port on the local host is used. At one time, this port number was the next number above 1024 that wasn't already in use for another connection. For example, the first website connection would be set up on the source port of 1025 and the second connection on 1026. If the 1025 port is no longer needed and is closed, and another port is needed, then 1025 would be used.
+
+Servers run network services and these services are bound to a virtual port and listen for communication on that virtual port. It is possible for multiple clients to connect to the same service and thus, use the same destination port number when connecting to the server. Because each client uses a unique IP address and port number, the server can keep track of up to 65534 connections per host.
+
+Connection Identification
+n fact, we can have multiple connections from the same client to the same server. Each client process will be assigned a different ephemeral port number, so even if they all try to access the same server process (such as the Web server process at 41.199.222.3:80), they will all have a different client socket and represent unique connections. 
+The first consequence of this is that each connection must be uniquely identified. This is done by using the pair of socket identifiers corresponding to the two endpoints of the connection, where a socket is simply the combination of the IP address and the port number of each process. This means a socket pair contains four pieces of information: source address, source port, destination address. Thus, TCP connections are sometimes said to be described by this addressing quadruple.

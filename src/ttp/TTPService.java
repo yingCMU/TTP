@@ -2,24 +2,52 @@ package ttp;
 
 import java.io.IOException;
 import java.net.SocketException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import datatypes.Datagram;
 
 import services.DatagramService;
 
 public class TTPService implements Runnable{
-	DatagramService udpService;
-	
+	private static DatagramService listenService;
+	private static DatagramService dataService;
+	private static DatagramService clientService;
+	private final int LISTENER_MAX = 10; 
 	int timer;//time out
-	private TTP ttpPacket;
+	private int data_length;
 	private Datagram datagram;
-	private int SYN;
-	private int ACK;
+	private int hisSYN;// current syn
+	private int hisACK;// ack I should reply to him now
+	private ConcurrentLinkedQueue<Datagram> request_queue;
+	private ConcurrentLinkedQueue<Datagram> data_queue;
+	private HashMap<Integer,ConDescriptor> active_connections;//record for active connections
+	private int mySYN;
+	private int myACK;// my coming ack is everything is good
 	private char ID;
-	
-	public TTPService() throws SocketException{
+	private int maximum_buffer = 10 ,MSS;
+	private HashMap sending_buffer = new HashMap();
+	private String srcaddr;
+	private String dstaddr;
+	private short srcport;
+	private short dstport;
+	//private HashMap rec_buffer = new HashMao();// using go back n, not needed
+	public TTPService(short port) throws SocketException{
+		//udpService = new DatagramService(port, 10);
+		request_queue = new ConcurrentLinkedQueue<Datagram>();
+		data_queue = new ConcurrentLinkedQueue<Datagram>(win);
 		
 	}
+	public TTPService(short dstport, String dstaddr) throws SocketException{
+		//udpService = new DatagramService(port, 10);
+		this.dstaddr = dstaddr;
+		this.dstport = dstport;
+		request_queue = new ConcurrentLinkedQueue<Datagram>();
+		data_queue = new ConcurrentLinkedQueue<Datagram>();
+		
+	}
+	
 	
 	/*
 	 * start a new connection
@@ -31,17 +59,145 @@ public class TTPService implements Runnable{
 	 *	Host A sends ACKnowledge
  	 *	Host B receives ACK. 
 	 *	TCP socket connection is ESTABLISHED.
-	 */
+	 
 	public void startCon(String srcIp, String dstIp, 
 		short srcPort, short dstPort){
 		datagram = new Datagram(srcIp, dstIp, srcPort, dstPort);
-		SYN = 0;
-		ACK = 0;
+		
+	}
+	*/
+	
+	/*
+	 * server open port to queue incoming requests , race condition?
+	 */
+	public void serverListen(int port){
+		try{
+			listenService = new DatagramService(port, 10);
+			System.out.println("server listening on port  "+port );
+			while(true){
+				
+				datagram = listenService.receiveDatagram();//a new thread to handle? incoming queue?
+				if( ( (TTP) datagram.getData()).isSYN() ){
+				System.out.println("add to request queue: received SYN request from ip "+ datagram.getSrcaddr() + ":" + datagram.getSrcport() + " Data: " + datagram.getData());
+			    request_queue.add(datagram);
+				}
+				else {
+					
+					System.out.println("add to data queue: received data from ip "+ datagram.getSrcaddr() + ":" + datagram.getSrcport() + " Data: " + datagram.getData());
+				    data_queue.add(datagram);
+				}
+					
+			}
+		}
+		catch(Exception e){
+			e.printStackTrace();
+			
+		}
+		finally{
+			listenService.close();
+		}
+		
 	}
 	/*
-	 * send data over a connection
+	 * client initialize a connection
 	 */
-	public void sendData(Object data, short dataLength) throws IOException{
+	public void clientCon(int clientport, int ACK, int SYN, Object data, short length){
+		TTP ttp = new TTP(ACK, 1, data, length);// a SYN packet
+		short size = 0;//size of datagram , to do
+		short checksum = ttp.getCheckSum();
+		try {
+			clientService = new DatagramService(clientport, 10);
+			/*
+			 * Datagram(String srcaddr, String dstaddr, short srcport,
+			short dstport, short size, short checksum, Object data)
+			 */
+			
+			Datagram datagram = new Datagram(dstaddr,dstport,size,checksum,ttp);
+			clientService.sendDatagram(datagram);
+		} catch (SocketException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		finally{
+			clientService.close();
+		}
+	}
+	
+	
+	/*
+	 * server side open a socket to accept clients' connections
+	 * it should handle multiple coming request, queue them, has a limit of queue size
+	 * which limit the number of connection queued , after which the socket refuse to queue, when this happens
+	 * tcp ignore coming requests, queued request are made available when calling accept
+	 * In other words, accept returns a new socket through which the server can communicate with the newly connected client. The old socket (on which accept was called)
+	 *  stays open, on the same port, listening for new connections
+	 * to do: queue?? avoid race// add lock new thread to do this?
+	 */
+	public Datagram serverAccept() throws IOException, ClassNotFoundException{
+		    if(request_queue.isEmpty())
+		    	return null;
+	        Datagram datagram = request_queue.peek();//should not be removed before success
+	        // assume all in order, to change
+			
+			
+			TTP ttp =(TTP) datagram.getData();
+			hisSYN = ttp.getSYN();//error handling , to do
+			hisACK += hisSYN +1 ; // next expected syn is ack
+			mySYN = 0;//random syn , to do
+			Datagram ack = constructACK(hisACK, mySYN);// return SYN + ACK, to do
+			listenService.sendDatagram(ack);// send SYN+ACK
+			datagram = listenService.receiveDatagram();// ideal no error handling, time out, what if droped, to do
+			System.out.println("received ACK request from ip "+ datagram.getSrcaddr() + ":" + datagram.getSrcport() + " Data: " + datagram.getData());
+			ttp =(TTP) datagram.getData();
+			// open a new socket to processTTP and release the listen socket for other requests
+			myACK = ttp.getACK();
+			request_queue.remove(); // can remove head from queue now
+			return datagram;
+		//}
+	}
+ /*
+  * to do
+  * read received ttp payload, pass data to upper layer, update ACK and SYN
+  */
+	private Object readTTP(TTP ttp) {
+		// TODO Auto-generated method stub  update ack and syn
+		hisSYN = ttp.getSYN();
+		hisACK = hisSYN + ttp.getLength()+1;
+		mySYN = ttp.getACK();
+		
+		return ttp.getData();
+	}
+
+	/*
+	 * close datagram services
+	 */
+	public void closeService(){
+		listenService.close();
+		dataService.close();
+		System.out.println("ttp service closed");
+	}
+	/*
+	 * to be changed
+	 * construct response ack
+	 */
+	private Datagram constructACK(int ACK, int SYN) {
+		Datagram ack = new Datagram();
+		ack.setSrcaddr(datagram.getDstaddr());
+		ack.setSrcport(datagram.getDstport());
+		ack.setDstaddr(datagram.getSrcaddr());
+		ack.setDstport(datagram.getSrcport());
+		ack.setData("ACK");
+		return ack;
+	}
+	
+	
+	
+	/*
+	private TTP construct_ttpPacket(Object data, short dataLength){
+		TTP ttpPacket = new TTP();;
 		ttpPacket.setData(data);
 		ttpPacket.setFragmentLength(dataLength);
 		
@@ -52,28 +208,46 @@ public class TTPService implements Runnable{
 		ttpPacket.setOffset((char)0);
 		ttpPacket.setID((char)0);
 		ttpPacket.setFlag((char)0);
+		return ttpPacket;
+	}
+	*/
+	private Datagram constructPacket(TTP ttp, String srcaddr, Short srcport, String destaddr, Short destport ){
+		Datagram gram = new Datagram();
+		gram.setData(ttp);
+		gram.setSrcaddr(srcaddr);
+		gram.setDstaddr(destaddr);
+		gram.setDstport(destport);
+		gram.setSrcport(srcport);
+		return gram;
 		
-		datagram.setData(ttpPacket);
-		
+	}
+
+	/*
+	 * send data over a datagram service
+	 */
+	public void sendData(int ACK, int SYN, Object data, short dataLength) throws IOException{
+		TTP ttp = new TTP(ACK,SYN, data, dataLength);
+		datagram.setData(ttp);
+		dataService.sendDatagram(datagram);
 	}
 	/*
 	 * receive data
+	 * if in order, remove corresponding data from sending_buffer, to do 
 	 */
-	public void recData() {
-		
+	public void recData(TTP ttp) {
+		readTTP(ttp);
 	}
-	/*
-	 * close a connection
-	 */
-	public void closeCon(){
-		
-	}
+	
 	/*
 	 * to handle multiple connection simultaneously
 	 */
 	public void mulCon(){
 		
 	}
+	/*
+	 * if out of order or time out, get data from send buffer and retransmit
+	 * 
+	 */
 	public void retransmit(int time){
 		
 	}
@@ -115,6 +289,17 @@ public class TTPService implements Runnable{
 		
 	}
 	
-	
+	/* multithread for application layer
+	private class Acceptor implements Runnable {
 
+		public void run() {
+			try {
+				Socket s = serverSocket.accept();
+			} catch(IOException ioe) {
+				ioe.printStackTrace();
+			}
+		}
+
+	}
+	*/
 }

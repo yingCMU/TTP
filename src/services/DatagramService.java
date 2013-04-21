@@ -13,6 +13,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.BindException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -30,8 +31,14 @@ public class DatagramService {
 		super();
 		this.port = port;
 		this.verbose = verbose;
-
+       try{
 		socket = new DatagramSocket(port);
+       }
+       catch(BindException e){
+    	   e.printStackTrace();
+    	   System.out.println("port: "+port);
+       }
+		
 	}
 
 	public void sendDatagram(Datagram datagram) throws IOException {
@@ -65,5 +72,8 @@ public class DatagramService {
 		Datagram datagram = (Datagram) oStream.readObject();
 
 		return datagram;
+	}
+	public void close(){
+		socket.close();
 	}
 }

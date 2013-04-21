@@ -14,18 +14,34 @@ public class TTP implements Serializable{
 	private int SYN;
 	//32 bit
 	private int ACK;
+	//private Pseudo Pseudo_Header;
 	private short checkSum;
 	private Object data;//?
 	private char offset;//for fragment in unit of 8
 	private char ID;
-	private short fragmentLength;// for each fragmented message 
+	short fragment_length;// for each fragmented message 
+	private short length;// for each fragmented message 
 	private char flag;//indicate whether has more fragment
 	
 	public TTP() {
 		offset = 0;
 		ID = 0;
 		flag = 0;
-		fragmentLength = 0;
+		fragment_length = 0;
+	}
+	/*
+	 * construct response ttp packet to be sent, update ack and syn
+	 */
+	public TTP(int ACK, int SYN, Object data,short length){
+		this.ACK = ACK;
+		this.length = length;
+		this.SYN = SYN;
+		this.data = data;
+		
+		offset = 0;
+		ID = 0;
+		flag = 0;
+		fragment_length = 0;
 	}
 	
 	public int getWSize() {
@@ -60,9 +76,7 @@ public class TTP implements Serializable{
 		this.data = data;
 	}
 	
-	public short getCheckSum() {
-		return checkSum;
-	}
+	
 	
 	public void setCheckSum(short checkSum) {
 		this.checkSum = checkSum;
@@ -84,11 +98,11 @@ public class TTP implements Serializable{
 		this.ID = ID;
 	}
 	public short getFragmentLength() {
-		return fragmentLength;
+		return fragment_length;
 	}
 	
 	public void setFragmentLength(short fragmentLength) {
-		this.fragmentLength = fragmentLength;
+		this.fragment_length = fragmentLength;
 	}
 	
 	public char getFlag() {
@@ -98,4 +112,44 @@ public class TTP implements Serializable{
 	public void setFlag(char flag) {
 		this.flag = flag;
 	}
+	private short getFragLength() {
+		// TODO Auto-generated method stub
+		return fragment_length;
+	}
+	
+	public short getCheckSum(){
+		//using int to prevent overflow, will get the lower 16 bits
+		int checkSum = 0; 
+		checkSum += (short) getSYN() + (short)(getSYN() >> 16);
+		checkSum += (short) getACK() + (short)(getACK() >> 16);
+		checkSum += (short) getOffset();
+		checkSum += (short) getID();
+		checkSum += (short) getFragLength();
+		checkSum += (short) getFlag();
+		return (short)checkSum;
+		
+		
+		
+	}
+
+	public boolean isSYN() {
+	
+		return (SYN == 1);
+	}
+	
+	public boolean isData(){
+		if ((flag ==0))
+			return true;
+		else 
+			return false;
+	}
+
+	public short getLength() {
+		return length;
+	}
+
+	public void setLength(short length) {
+		this.length = length;
+	}
+	
 }
