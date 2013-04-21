@@ -8,11 +8,15 @@ public class ConDescriptor {
 	private String dstaddr;
 	private short srcport;
 	private short dstport;
-	public ConDescriptor(String srcaddr, String dstaddr, short srcport, short dstport){
+	private int SYN;
+	private int ACK;
+	public ConDescriptor(String srcaddr, String dstaddr, short srcport, short dstport, int SYN, int ACK){
 		this.srcaddr = srcaddr;
 		this.dstaddr = dstaddr;
 		this.srcport = srcport;
 		this.dstport = dstport;
+		this.ACK = ACK;
+		this.SYN = SYN;
 		
 	}
 	
@@ -32,4 +36,20 @@ public class ConDescriptor {
 		
 		
 	}*/
+
+	public int getSYN() {
+		return SYN;
+	}
+
+	public void setSYN(int sYN) {
+		SYN = sYN;
+	}
+
+	public int getACK() {
+		return ACK;
+	}
+
+	public void setACK(int aCK) {
+		ACK = aCK;
+	}
 }
