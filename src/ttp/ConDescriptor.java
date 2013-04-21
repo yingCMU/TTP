@@ -1,7 +1,6 @@
 package ttp;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
+
 
 public class ConDescriptor {
 	private String srcaddr;

@@ -90,12 +90,12 @@ public class ClientTTPService implements Runnable{
 			 */
 			
 			Datagram datagram = new Datagram(srcaddr,dstaddr,srcport,dstport,size,checksum,ttpSYN);
-			
+			System.out.println("sending SYN...");
 			clientService.sendDatagram(datagram);
-			
+			System.out.println(" SYN . sent  next receive syn+ack");
 			datagram = clientService.receiveDatagram();//a new thread to handle? incoming queue?
 			if( ( (TTP) datagram.getData()).isACK() ){
-			System.out.println("3-way finished: received ACK from ip "+ datagram.getSrcaddr() + ":" 
+			System.out.println("3-way  ACK from server ip "+ datagram.getSrcaddr() + ":" 
 					+ datagram.getSrcport() + " Data: " + datagram.getData());
 		    
 			}
@@ -103,6 +103,9 @@ public class ClientTTPService implements Runnable{
 				System.out.println("clientcon: received invalid packet from ip "+ datagram.getSrcaddr() + ":" 
 						+ datagram.getSrcport());	
 			}
+			TTP ttpACK = new TTP(1, 0, data, length);
+			datagram = new Datagram(srcaddr,dstaddr,srcport,dstport,size,checksum,ttpACK);
+			clientService.sendDatagram(datagram);
 			
 		} catch (SocketException e) {
 			// TODO Auto-generated catch block
@@ -242,6 +245,15 @@ public class ClientTTPService implements Runnable{
 		// TODO Auto-generated method stub
 		
 	}
+	/*
+	 * close datagram services
+	 */
+	public void closeService(){
+		clientService.close();
+		dataService.close();
+		System.out.println("ttp server service closed");
+	}
+
 	
 	/* multithread for application layer
 	private class Acceptor implements Runnable {

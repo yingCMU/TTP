@@ -17,6 +17,7 @@ public class ServerTTPService implements Runnable{
 	private static DatagramService dataService;
 	private static DatagramService clientService;
 	private final int LISTENER_MAX = 10; 
+	private int con_descriptor = 1;
 	int timer;//time out
 	private int data_length;
 	private Datagram datagram;
@@ -37,15 +38,32 @@ public class ServerTTPService implements Runnable{
 	private short win;
 	//private HashMap rec_buffer = new HashMao();// using go back n, not needed
 	public ServerTTPService(short port) throws SocketException{
-		//udpService = new DatagramService(port, 10);
+		
+		this.srcport = port;
+		listenService = new DatagramService(srcport, 10);
+		try
+        {
+            InetAddress addr = InetAddress.getLocalHost();
+            String hostname = addr.getHostName();
+           // System.out.println(addr.getHostAddress());
+            //System.out.println(hostname);
+            
+    		this.srcaddr = addr.getHostAddress();
+        }catch(UnknownHostException e)
+        {
+             e.printStackTrace();
+        }
+		
 		request_queue = new ConcurrentLinkedQueue<Datagram>();
 		data_queue = new ConcurrentLinkedQueue<Datagram>();
 		
 	}
+	
 	public ServerTTPService(short srcport, short dstport, String dstaddr) throws SocketException{
 		//udpService = new DatagramService(port, 10);
 		this.dstaddr = dstaddr;
 		this.dstport = dstport;
+		listenService = new DatagramService(srcport, 10);
 		try
         {
             InetAddress addr = InetAddress.getLocalHost();
@@ -86,22 +104,28 @@ public class ServerTTPService implements Runnable{
 	/*
 	 * server open port to queue incoming requests , race condition?
 	 */
-	public void serverListen(int port){
+	public int serverListen(){
 		try{
-			listenService = new DatagramService(port, 10);
-			System.out.println("server listening on port  "+port );
+			
+			
 			while(true){
-				
+				System.out.println("server listening on port  "+srcport );
 				datagram = listenService.receiveDatagram();//a new thread to handle? incoming queue?
 				if( ( (TTP) datagram.getData()).isSYN() ){
 				System.out.println("add to SYN queue: received SYN  from ip "+ datagram.getSrcaddr() + ":" + datagram.getSrcport() + " Data: " + datagram.getData());
-			    request_queue.add(datagram);
+				
+				request_queue.add(datagram);
+				
+				System.out.println("request queue size "+request_queue.size());
+				int dp = serverAccept();
+			    return dp;// return a connection descriptor , to do
 				}
 				else {
 					
 					System.out.println("add to data queue: received data from ip "+ datagram.getSrcaddr() + ":" + datagram.getSrcport() + " Data: " + datagram.getData());
 				    data_queue.add(datagram);
 				}
+				
 					
 			}
 		}
@@ -110,8 +134,9 @@ public class ServerTTPService implements Runnable{
 			
 		}
 		finally{
-			listenService.close();
+			//listenService.close();
 		}
+		return -1;
 		
 	}
 	
@@ -124,11 +149,13 @@ public class ServerTTPService implements Runnable{
 	 *  stays open, on the same port, listening for new connections
 	 * to do: queue?? avoid race// add lock new thread to do this?
 	 */
-	public Datagram serverAccept() throws IOException, ClassNotFoundException{
-		    if(request_queue.isEmpty())
-		    	return null;
+	public int serverAccept() throws IOException, ClassNotFoundException{
+		System.out.println("server accepting........");
+		    while(true){
+		    	if (request_queue.isEmpty())
+		    		continue;
 	        Datagram datagram = request_queue.peek();//should not be removed before success
-	        
+	        System.out.println("request_queue.peek  ...");
 	        // assume all in order, to change for error handling
 			
 			
@@ -136,16 +163,33 @@ public class ServerTTPService implements Runnable{
 			hisSYN = ttp.getSYN();//error handling , to do
 			hisACK += hisSYN +1 ; // next expected syn is ack
 			mySYN = 0;//random syn , to do
-			Datagram ack = constructACK(hisACK, mySYN);// return SYN + ACK, to do
-			listenService.sendDatagram(ack);// send SYN+ACK
+			
+			
+			
+			TTP synack = new TTP(1, 1,"syn+ack" , (short)"syn+ack".length());// a SYN packet
+			short size = 0;//size of datagram , to do
+			short checksum = synack.getCheckSum();
+			
+				
+				 datagram = new Datagram(srcaddr,datagram.getSrcaddr(),srcport,datagram.getSrcport(),size,checksum,synack);
+				
+				
+			
+			
+			
+			//Datagram ack = constructACK(hisACK, mySYN);// return SYN + ACK, to do
+				// System.out.println("srcaddr :"+datagram.getSrcaddr()+" dstaddr "+datagram.getDstaddr() + "srcport "+datagram.getSrcport()+ "dstport "+datagram.getDstport());
+			listenService.sendDatagram(datagram);// send SYN+ACK
 			datagram = listenService.receiveDatagram();// ideal no error handling, time out, what if droped, to do
 			System.out.println("received ACK request from ip "+ datagram.getSrcaddr() + ":" + datagram.getSrcport() + " Data: " + datagram.getData());
 			ttp =(TTP) datagram.getData();
 			// open a new socket to processTTP and release the listen socket for other requests
 			myACK = ttp.getACK();
 			request_queue.remove(); // can remove head from queue now
-			return datagram;
-		//}
+			System.out.println("3-way finished");
+			System.out.println("request queue size "+request_queue.size());
+			return con_descriptor++;// return a connection descriptor
+		}
 	}
  /*
   * to do
@@ -166,7 +210,7 @@ public class ServerTTPService implements Runnable{
 	public void closeService(){
 		listenService.close();
 		dataService.close();
-		System.out.println("ttp service closed");
+		System.out.println("ttp server service closed");
 	}
 	/*
 	 * to be changed

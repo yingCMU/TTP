@@ -24,7 +24,10 @@ public class TTPserver {
 		
 		int port = Integer.parseInt(args[0]);
 		service = new ServerTTPService((short)port);
-		service.serverListen(port);
+		while(true){
+		service.serverListen();
+		}
+		//service.serverAccept();
 		//run();
 	}
 
