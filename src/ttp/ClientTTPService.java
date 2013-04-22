@@ -112,7 +112,7 @@ public class ClientTTPService extends TTPservice implements Runnable{
 			e.printStackTrace();
 		}
 		finally{
-			clientService.close();
+			//clientService.close();
 		}
 	}
 	
@@ -123,7 +123,7 @@ public class ClientTTPService extends TTPservice implements Runnable{
 	public void sendData( Object data, short dataLength) {
 		
 		TTP ttp = new TTP(serverACK,clientSYN, data, dataLength);
-		Datagram datagram = constructPacket(ttp);;
+		Datagram datagram = constructPacket(ttp);
 		
 		try {
 			clientService.sendDatagram(datagram);
@@ -139,7 +139,9 @@ public class ClientTTPService extends TTPservice implements Runnable{
 	public void recData() {
 		Datagram datagram;
 		try {
+			System.out.println("client rec data");
 			datagram = clientService.receiveDatagram();
+			System.out.println("client rec data 2");
 			TTP ttp = (TTP)datagram.getData();
 			clientSYN = ttp.getACK();
 			serverACK = ttp.getSYN()+ttp.getLength();

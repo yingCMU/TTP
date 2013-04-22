@@ -54,8 +54,10 @@ public class TTPclient {
 		 */
 		System.out.println("ttp service dstport "+dstport);
 		ttps = new ClientTTPService((short) srcport,(short)dstport, "localhost");
+		
 		ttps.clientCon( 1, ttp,ttp.getLength());
-		System.out.println("Sent SYN");
+		ttps.recData();
+		System.out.println("client and server connection established");
 		ttps.closeService();
 		//datagram = ds.receiveDatagram();
 		//System.out.println("Received " + datagram.getData());

@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.net.SocketException;
 
 import services.DatagramService;
+import ttp.ConDescriptor;
 import ttp.ServerTTPService;
 import datatypes.Datagram;
 
@@ -25,7 +26,10 @@ public class TTPserver {
 		int port = Integer.parseInt(args[0]);
 		service = new ServerTTPService((short)port);
 		while(true){
-		service.serverListen();
+		ConDescriptor dp = service.serverListen();
+		System.out.println("sending data");
+			service.sendData(0, dp, "ss", (short)2);
+			System.out.println(" data sent" );	
 		}
 		//service.serverAccept();
 		//run();

@@ -162,19 +162,12 @@ public class ServerTTPService extends TTPservice implements Runnable{
 			hisSYN = ttp.getSYN();//error handling , to do
 			hisACK += hisSYN +1 ; // next expected syn is ack
 			mySYN = 0;//random syn , to do
-			
-			
-			
 			TTP synack = new TTP(1, 1,"syn+ack" , (short)"syn+ack".length());// a SYN packet
 			short size = 0;//size of datagram , to do
 			short checksum = synack.getCheckSum();
 			
 				
 				 datagram = new Datagram(srcaddr,datagram.getSrcaddr(),srcport,datagram.getSrcport(),size,checksum,synack);
-				
-				
-			
-			
 			
 			//Datagram ack = constructACK(hisACK, mySYN);// return SYN + ACK, to do
 				// System.out.println("srcaddr :"+datagram.getSrcaddr()+" dstaddr "+datagram.getDstaddr() + "srcport "+datagram.getSrcport()+ "dstport "+datagram.getDstport());
@@ -187,8 +180,9 @@ public class ServerTTPService extends TTPservice implements Runnable{
 			request_queue.remove(); // can remove head from queue now
 			System.out.println("3-way finished");
 			System.out.println("request queue size "+request_queue.size());
-			ConDescriptor oneClient= new ConDescriptor(srcaddr, datagram.getSrcaddr(), srcport, datagram.getSrcport(), ttp.getSYN());
+			ConDescriptor oneClient= new ConDescriptor(srcaddr, datagram.getSrcaddr(), srcport, datagram.getSrcport(),1,0);
 			clientList.put(oneClient.getKey(), oneClient);
+			return oneClient;
 		}
 	}
 
@@ -203,7 +197,21 @@ public class ServerTTPService extends TTPservice implements Runnable{
 	}
 
 	
-	
+	/*
+	 * send data over a datagram service
+	 */
+	public void sendData(int ACK, ConDescriptor dp, Object data, short dataLength) throws IOException{
+		TTP ttp = new TTP(ACK, dp.getClientSYN(), data, dataLength);
+		//datagram.setData(ttp);
+		//TTP ttp = new TTP(serverACK,clientSYN, data, dataLength);
+		 datagram = constructPacket(ttp);
+		 System.out.println("server sending data :\nsrcaddr :"+datagram.getSrcaddr()+" dstaddr "+datagram.getDstaddr() + "srcport "+datagram.getSrcport()+ "dstport "+datagram.getDstport());
+		Timer sendWithTimer = new Timer(20000, datagram, listenService);
+		dp.setTimer(sendWithTimer);
+		sendWithTimer.run();//no dest port addr
+		
+		
+	}	
 	
 	
 	/*

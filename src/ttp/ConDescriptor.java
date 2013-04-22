@@ -7,15 +7,18 @@ public class ConDescriptor {
 	private String dstaddr;
 	private short srcport;
 	private short dstport;
-	private int SYN;
+	private int serverSYN;
+	private int clientSYN;
+	
 	private Timer timer;
 	
-	public ConDescriptor(String srcaddr, String dstaddr, short srcport, short dstport, int SYN){
+	public ConDescriptor(String srcaddr, String dstaddr, short srcport, short dstport, int serverSYN, int clientSYN){
 		this.srcaddr = srcaddr;
 		this.dstaddr = dstaddr;
 		this.srcport = srcport;
 		this.dstport = dstport;
-		this.SYN = SYN;
+		this.serverSYN = serverSYN;
+		this.clientSYN = clientSYN;
 		
 	}
 	
@@ -31,14 +34,7 @@ public class ConDescriptor {
 		return dstaddr + dstport;
 	}
 
-	public int getSYN() {
-		return SYN;
-	}
 
-	public void setSYN(int sYN) {
-		SYN = sYN;
-	}
-	
 	public void setTimer(Timer timer) {
 		this.timer = timer;
 	}
@@ -47,5 +43,21 @@ public class ConDescriptor {
 		if (timer != null && timer.getSendCount() > 0) {
 			timer.interrupt();
 		}
+	}
+
+	public int getClientSYN() {
+		return clientSYN;
+	}
+
+	public void setClientSYN(int clientSYN) {
+		this.clientSYN = clientSYN;
+	}
+
+	public int getServerSYN() {
+		return serverSYN;
+	}
+
+	public void setServerSYN(int serverSYN) {
+		this.serverSYN = serverSYN;
 	}
 }
