@@ -27,9 +27,10 @@ public class TTPserver {
 		service = new ServerTTPService((short)port);
 		while(true){
 		ConDescriptor dp = service.serverListen();
-		System.out.println("sending data");
-			service.sendData(0, dp, "ss", (short)2);
-			System.out.println(" data sent" );	
+		System.out.println("ttp server receiving data");
+		service.recData();
+			//service.sendData(0, dp, "hello word", (short)2);
+			//System.out.println(" data sent" );	
 		}
 		//service.serverAccept();
 		//run();

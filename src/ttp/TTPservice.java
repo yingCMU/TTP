@@ -11,11 +11,11 @@ public abstract class TTPservice {
 	static DatagramService dataService;
 	 
 	 String srcaddr;
-	String dstaddr;
+	
 	 short srcport;
-	 short dstport;
+	
 	 short MSS = 563;
-	 
+	 final  short win = 128;// go back n window size
 		
 		
 	
@@ -32,7 +32,7 @@ public abstract class TTPservice {
 			return ttp.getData();*/
 			return null;
 		}
-		 Datagram constructPacket(TTP ttp ){
+		 Datagram constructPacket(TTP ttp, String dstaddr, short dstport ){
 			short checksum = ttp.getCheckSum();
 			short size = 0;// size of datagram, to do 
 			/*
@@ -44,4 +44,6 @@ public abstract class TTPservice {
 			return gram;
 			
 		}
+		 
+		 
 }

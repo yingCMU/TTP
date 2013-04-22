@@ -56,7 +56,8 @@ public class TTPclient {
 		ttps = new ClientTTPService((short) srcport,(short)dstport, "localhost");
 		
 		ttps.clientCon( 1, ttp,ttp.getLength());
-		ttps.recData();
+		//ttps.recData();
+		ttps.sendData("hello", (short ) 4);
 		System.out.println("client and server connection established");
 		ttps.closeService();
 		//datagram = ds.receiveDatagram();

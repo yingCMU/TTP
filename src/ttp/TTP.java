@@ -7,11 +7,14 @@ import java.io.Serializable;
  * padding 
  * */
 public class TTP implements Serializable{
-	//size??
+	
 	//16 bit
+	final private char SYNFLAG = 1;
+	final private char ACKFLAG = 2;
+	final private char FINFLAG = 3;
 	private short windowSize;
 	//32 bit
-	private int SYN;
+	private int SYN;//sequence number
 	//32 bit
 	private int ACK;
 	//private Pseudo Pseudo_Header;
@@ -32,7 +35,7 @@ public class TTP implements Serializable{
 	/*
 	 * construct response ttp packet to be sent, update ack and syn
 	 */
-	public TTP(int ACK, int SYN, Object data,short length){
+	public TTP(int ACK, int SYN, Object data,short length, boolean isSYN){
 		this.ACK = ACK;
 		this.length = length;
 		this.SYN = SYN;
@@ -40,7 +43,8 @@ public class TTP implements Serializable{
 		
 		offset = 0;
 		ID = 0;
-		flag = 0;
+		if(isSYN)
+		setSYNFlag();
 		fragment_length = 0;
 	}
 	
@@ -112,6 +116,20 @@ public class TTP implements Serializable{
 	public void setFlag(char flag) {
 		this.flag = flag;
 	}
+	
+	public void setSYNFlag(){
+		setFlag(SYNFLAG);
+	}
+	public void setACKFlag(){
+		setFlag(ACKFLAG);
+	}
+	public void setSYNACKFlag(){
+		setFlag( (char)(ACKFLAG | SYNFLAG));
+	}
+	public void setFINFlag(){
+		setFlag(FINFLAG);
+	}
+	
 	private short getFragLength() {
 		// TODO Auto-generated method stub
 		return fragment_length;
@@ -134,11 +152,14 @@ public class TTP implements Serializable{
 
 	public boolean isSYN() {
 	
-		return (SYN == 1);
+		return (getFlag() == SYNFLAG);
+	}
+	public boolean isFIN(){
+		return (getFlag() == FINFLAG);
 	}
 	public boolean isACK() {
 		
-		return (ACK == 1);
+		return (getFlag() == ACKFLAG);
 	}
 	
 	public boolean isData(){

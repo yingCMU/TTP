@@ -23,7 +23,8 @@ public class ClientTTPService extends TTPservice implements Runnable{
 	private int serverACK;// ack I should reply to him now
 	private int clientSYN;
 	private int clientACK;// my coming ack is everything is good
-	
+	String dstaddr;
+	short dstport;
 	
 	private ConcurrentLinkedQueue<Datagram> request_queue;
 	private ConcurrentLinkedQueue<Datagram> data_queue;
@@ -32,7 +33,7 @@ public class ClientTTPService extends TTPservice implements Runnable{
 	private int maximum_buffer = 10 ;
 	private HashMap sending_buffer = new HashMap();
 	
-	private short win;
+	
 	//private HashMap rec_buffer = new HashMao();// using go back n, not needed
 	
 	public ClientTTPService(short srcport, short dstport, String dstaddr) throws SocketException{
@@ -45,7 +46,7 @@ public class ClientTTPService extends TTPservice implements Runnable{
             String hostname = addr.getHostName();
            // System.out.println(addr.getHostAddress());
             //System.out.println(hostname);
-            this.srcport = srcport;
+            this.srcport = srcport;//client
     		this.srcaddr = addr.getHostAddress();
         }catch(UnknownHostException e)
         {
@@ -72,7 +73,7 @@ public class ClientTTPService extends TTPservice implements Runnable{
 	
 	*/
 	public void clientCon( int ACK,  Object data, short length){
-		TTP ttpSYN = new TTP(ACK, 1, data, length);// a SYN packet
+		TTP ttpSYN = new TTP(ACK, 1, data, length,true);// a SYN packet
 		short size = 0;//size of datagram , to do
 		
 		try {
@@ -82,7 +83,7 @@ public class ClientTTPService extends TTPservice implements Runnable{
 			short dstport, short size, short checksum, Object data)
 			 */
 			
-			Datagram datagram = constructPacket(ttpSYN);
+			Datagram datagram = constructPacket(ttpSYN,dstaddr,dstport);
 			System.out.println("sending SYN...");
 			clientService.sendDatagram(datagram);
 			System.out.println(" SYN . sent  next receive syn+ack");
@@ -96,8 +97,8 @@ public class ClientTTPService extends TTPservice implements Runnable{
 				System.out.println("clientcon: received invalid packet from ip "+ datagram.getSrcaddr() + ":" 
 						+ datagram.getSrcport());	
 			}
-			TTP ttpACK = new TTP(1, 0, data, length);
-			datagram = constructPacket(ttpACK);
+			TTP ttpACK = new TTP(1, 0, data, length,false);
+			datagram = constructPacket(ttpACK,dstaddr,dstport);
 			clientService.sendDatagram(datagram);
 			System.out.println("3-way finished");
 			
@@ -122,8 +123,9 @@ public class ClientTTPService extends TTPservice implements Runnable{
 	 */
 	public void sendData( Object data, short dataLength) {
 		
-		TTP ttp = new TTP(serverACK,clientSYN, data, dataLength);
-		Datagram datagram = constructPacket(ttp);
+		TTP ttp = new TTP(serverACK,clientSYN, data, dataLength,false);
+		System.out.println("@@@@client sending data ACK-"+serverACK + "; SYN -"+clientSYN);
+		Datagram datagram = constructPacket(ttp,dstaddr,dstport);
 		
 		try {
 			clientService.sendDatagram(datagram);
@@ -139,13 +141,15 @@ public class ClientTTPService extends TTPservice implements Runnable{
 	public void recData() {
 		Datagram datagram;
 		try {
-			System.out.println("client rec data");
+			System.out.println("client rec data.......");
 			datagram = clientService.receiveDatagram();
-			System.out.println("client rec data 2");
+			
 			TTP ttp = (TTP)datagram.getData();
+			System.out.println("@@@@client receiving data ACK-"+ttp.getACK() + "; SYN -"+ttp.getSYN());
 			clientSYN = ttp.getACK();
 			serverACK = ttp.getSYN()+ttp.getLength();
 			readTTP(ttp);
+			System.out.println("received paload data: "+ttp.getData());
 			
 		} catch (ClassNotFoundException e) {
 			// TODO Auto-generated catch block
@@ -157,6 +161,14 @@ public class ClientTTPService extends TTPservice implements Runnable{
 		}
 		
 	}
+	/*
+	 * to check if receved SYN is in window, 
+	 * @argument recSYN: received SYN
+	 * curSYN : current SYN 
+	 */
+	private boolean inWindow(int recSYN, int curSYN ){
+		 return (recSYN <= curSYN + win);
+	 }
 	/*
 	 * to be changed
 	 * construct response ack
@@ -223,7 +235,19 @@ public class ClientTTPService extends TTPservice implements Runnable{
 		
 	}
 	/*
-	 * Go-Back-N
+	 * Sender has to buffer all unacknowledged packets,(up to N) because they may require 
+	 * retransmission.Receiver may be able to accept out-of-order packets, 
+	 * but only up to its buffer limits.The sender needs to set timers in 
+	 * order to know when to retransmit a packet that may have been lost
+	 * ß Sender Window: Keeps track of SNs for frames that have been sent 
+	 * but not yet acknowledged.
+	 * ß Receiver Window: Keeps track of sequence numbers for frames 
+	 * that the receiver is allowed to accept With maximum window size of 1, 
+	 * the sender waits for an ACK before sending another frame.ß With maximum window 
+	 * size of WS, the sender can transmit up to WS frames before being blocked.
+	 * - allows sender to transmit several frames before receiving an ACK
+	 * - also a form of “pipelining” => keeps the link from being idle
+
 	 */
 	private static void goBackN(){
 		

@@ -21,7 +21,7 @@ public class ServerTTPService extends TTPservice implements Runnable{
 	private int con_descriptor = 1;
 	int timer;//time out
 	private int data_length;
-	private Datagram datagram;
+	//private Datagram datagram;
 	private int hisSYN;// current syn
 	private int hisACK;// ack I should reply to him now
 	private ConcurrentLinkedQueue<Datagram> request_queue;
@@ -59,17 +59,17 @@ public class ServerTTPService extends TTPservice implements Runnable{
 	
 	public ServerTTPService(short srcport, short dstport, String dstaddr) throws SocketException{
 		//udpService = new DatagramService(port, 10);
-		this.dstaddr = dstaddr;
-		this.dstport = dstport;
+		//this.dstaddr = dstaddr;//client
+		//this.dstport = dstport;//client
 		
-		listenService = new DatagramService(srcport, 10);
+		listenService = new DatagramService(srcport, 10);//server
 		try
         {
             InetAddress addr = InetAddress.getLocalHost();
-            String hostname = addr.getHostName();
+            String hostname = addr.getHostName();//server
            // System.out.println(addr.getHostAddress());
             //System.out.println(hostname);
-            this.srcport = srcport;
+            this.srcport = srcport;//server
     		this.srcaddr = addr.getHostAddress();
         }catch(UnknownHostException e)
         {
@@ -105,7 +105,7 @@ public class ServerTTPService extends TTPservice implements Runnable{
 	 */
 	public ConDescriptor serverListen(){
 		try{
-			
+			Datagram datagram;
 			
 			while(true){
 				System.out.println("server listening on port  "+srcport );
@@ -162,12 +162,12 @@ public class ServerTTPService extends TTPservice implements Runnable{
 			hisSYN = ttp.getSYN();//error handling , to do
 			hisACK += hisSYN +1 ; // next expected syn is ack
 			mySYN = 0;//random syn , to do
-			TTP synack = new TTP(1, 1,"syn+ack" , (short)"syn+ack".length());// a SYN packet
+			TTP synack = new TTP(1, 1,"syn+ack" , (short)"syn+ack".length(),true);// a SYN packet
 			short size = 0;//size of datagram , to do
 			short checksum = synack.getCheckSum();
 			
 				
-				 datagram = new Datagram(srcaddr,datagram.getSrcaddr(),srcport,datagram.getSrcport(),size,checksum,synack);
+			datagram = new Datagram(srcaddr,datagram.getSrcaddr(),srcport,datagram.getSrcport(),size,checksum,synack);
 			
 			//Datagram ack = constructACK(hisACK, mySYN);// return SYN + ACK, to do
 				// System.out.println("srcaddr :"+datagram.getSrcaddr()+" dstaddr "+datagram.getDstaddr() + "srcport "+datagram.getSrcport()+ "dstport "+datagram.getDstport());
@@ -201,18 +201,46 @@ public class ServerTTPService extends TTPservice implements Runnable{
 	 * send data over a datagram service
 	 */
 	public void sendData(int ACK, ConDescriptor dp, Object data, short dataLength) throws IOException{
-		TTP ttp = new TTP(ACK, dp.getClientSYN(), data, dataLength);
+		TTP ttp = new TTP(ACK, dp.getClientSYN(), data, dataLength,false);
 		//datagram.setData(ttp);
 		//TTP ttp = new TTP(serverACK,clientSYN, data, dataLength);
-		 datagram = constructPacket(ttp);
+		Datagram datagram = constructPacket(ttp,dp.clientaddr,dp.clientport);
 		 System.out.println("server sending data :\nsrcaddr :"+datagram.getSrcaddr()+" dstaddr "+datagram.getDstaddr() + "srcport "+datagram.getSrcport()+ "dstport "+datagram.getDstport());
 		Timer sendWithTimer = new Timer(20000, datagram, listenService);
-		dp.setTimer(sendWithTimer);
+		dp.setTimer(sendWithTimer);// some problem ,get stuck
 		sendWithTimer.run();//no dest port addr
 		
 		
 	}	
 	
+	/*
+	 * receive data
+	 * if in order, remove corresponding data from sending_buffer, to do 
+	 */
+	public void recData() {
+		Datagram datagram;
+		try {
+			System.out.println("server rec data");
+			datagram = listenService.receiveDatagram();
+			
+			TTP ttp = (TTP)datagram.getData();
+			String clientKey = datagram.getSrcaddr()+datagram.getSrcport();
+			ConDescriptor dp = clientList.get(clientKey);
+			dp.setServerSYN(ttp.getACK());
+			dp.setClientSYN(ttp.getSYN()+ttp.getLength()) ;
+			readTTP(ttp);
+			System.out.println("received ttp: "+ttp.getData());
+			
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			
+		}
+		
+	}
 	
 	/*
 	private TTP construct_ttpPacket(Object data, short dataLength){

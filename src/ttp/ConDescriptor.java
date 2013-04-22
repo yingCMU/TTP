@@ -3,35 +3,35 @@ package ttp;
 
 
 public class ConDescriptor {
-	private String srcaddr;
-	private String dstaddr;
-	private short srcport;
-	private short dstport;
+	private String serveraddr;
+	 String clientaddr;
+	private short serverport;
+	 short clientport;
 	private int serverSYN;
 	private int clientSYN;
 	
 	private Timer timer;
 	
-	public ConDescriptor(String srcaddr, String dstaddr, short srcport, short dstport, int serverSYN, int clientSYN){
-		this.srcaddr = srcaddr;
-		this.dstaddr = dstaddr;
-		this.srcport = srcport;
-		this.dstport = dstport;
+	public ConDescriptor(String serveraddr, String clientaddr, short serverport, short clientport, int serverSYN, int clientSYN){
+		this.serveraddr = serveraddr;
+		this.clientaddr = clientaddr;
+		this.serverport = serverport;
+		this.clientport = clientport;
 		this.serverSYN = serverSYN;
 		this.clientSYN = clientSYN;
 		
 	}
 	
 	public boolean equals(ConDescriptor b){
-		if (srcaddr.equals(b.srcaddr) && dstaddr.equals(b.dstaddr) 
-				&& srcport == b.srcport && dstport ==b.dstport)
+		if (serveraddr.equals(b.serveraddr) && clientaddr.equals(b.clientaddr) 
+				&& serverport == b.serverport && clientport ==b.clientport)
 			return true;
 		else 
 			return false;
 	}
 	
 	public String getKey() {
-		return dstaddr + dstport;
+		return clientaddr + clientport;
 	}
 
 
