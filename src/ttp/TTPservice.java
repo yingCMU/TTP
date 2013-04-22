@@ -9,26 +9,16 @@ import services.DatagramService;
 
 public abstract class TTPservice {
 	static DatagramService dataService;
-	 Datagram datagram;
+	 
 	 String srcaddr;
 	String dstaddr;
 	 short srcport;
 	 short dstport;
-	/*
-	 * send data over a datagram service
-	 */
-	public void sendData(int ACK, int SYN, Object data, short dataLength) throws IOException{
-		TTP ttp = new TTP(ACK,SYN, data, dataLength);
-		datagram.setData(ttp);
-		dataService.sendDatagram(datagram);
-	}
-	/*
-	 * receive data
-	 * if in order, remove corresponding data from sending_buffer, to do 
-	 */
-	public void recData(TTP ttp) {
-		readTTP(ttp);
-	}
+	 short MSS = 563;
+	 
+		
+		
+	
 	/*
 	  * to do
 	  * read received ttp payload, pass data to upper layer, update ACK and SYN

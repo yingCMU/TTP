@@ -19,28 +19,24 @@ public class ClientTTPService extends TTPservice implements Runnable{
 	private final int LISTENER_MAX = 10; 
 	int timer;//time out
 	private int data_length;
+	private int serverSYN;// current syn
+	private int serverACK;// ack I should reply to him now
+	private int clientSYN;
+	private int clientACK;// my coming ack is everything is good
 	
-	private int hisSYN;// current syn
-	private int hisACK;// ack I should reply to him now
+	
 	private ConcurrentLinkedQueue<Datagram> request_queue;
 	private ConcurrentLinkedQueue<Datagram> data_queue;
 	
-	private int mySYN;
-	private int myACK;// my coming ack is everything is good
 	private char ID;
-	private int maximum_buffer = 10 ,MSS;
+	private int maximum_buffer = 10 ;
 	private HashMap sending_buffer = new HashMap();
 	
 	private short win;
 	//private HashMap rec_buffer = new HashMao();// using go back n, not needed
-	public ClientTTPService(short port) throws SocketException{
-		//udpService = new DatagramService(port, 10);
-		request_queue = new ConcurrentLinkedQueue<Datagram>();
-		data_queue = new ConcurrentLinkedQueue<Datagram>();
-		
-	}
+	
 	public ClientTTPService(short srcport, short dstport, String dstaddr) throws SocketException{
-		//udpService = new DatagramService(port, 10);
+		clientService = new DatagramService(srcport, 10);
 		this.dstaddr = dstaddr;
 		this.dstport = dstport;
 		try
@@ -75,12 +71,12 @@ public class ClientTTPService extends TTPservice implements Runnable{
 	 
 	
 	*/
-	public void clientCon(int clientport, int ACK,  Object data, short length){
+	public void clientCon( int ACK,  Object data, short length){
 		TTP ttpSYN = new TTP(ACK, 1, data, length);// a SYN packet
 		short size = 0;//size of datagram , to do
 		
 		try {
-			clientService = new DatagramService(clientport, 10);
+			
 			/*
 			 * Datagram(String srcaddr, String dstaddr, short srcport,
 			short dstport, short size, short checksum, Object data)
@@ -121,17 +117,54 @@ public class ClientTTPService extends TTPservice implements Runnable{
 	}
 	
 	
-	
+	/*
+	 * send data over a datagram service
+	 */
+	public void sendData( Object data, short dataLength) {
+		
+		TTP ttp = new TTP(serverACK,clientSYN, data, dataLength);
+		Datagram datagram = constructPacket(ttp);;
+		
+		try {
+			clientService.sendDatagram(datagram);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	/*
+	 * receive data
+	 * if in order, remove corresponding data from sending_buffer, to do 
+	 */
+	public void recData() {
+		Datagram datagram;
+		try {
+			datagram = clientService.receiveDatagram();
+			TTP ttp = (TTP)datagram.getData();
+			clientSYN = ttp.getACK();
+			serverACK = ttp.getSYN()+ttp.getLength();
+			readTTP(ttp);
+			
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			
+		}
+		
+	}
 	/*
 	 * to be changed
 	 * construct response ack
 	 */
 	private Datagram constructACK(int ACK, int SYN) {
 		Datagram ack = new Datagram();
-		ack.setSrcaddr(datagram.getDstaddr());
-		ack.setSrcport(datagram.getDstport());
-		ack.setDstaddr(datagram.getSrcaddr());
-		ack.setDstport(datagram.getSrcport());
+		ack.setSrcaddr(srcaddr);
+		ack.setSrcport(srcport);
+		ack.setDstaddr(dstaddr);
+		ack.setDstport(dstport);
 		ack.setData("ACK");
 		return ack;
 	}
@@ -159,18 +192,7 @@ public class ClientTTPService extends TTPservice implements Runnable{
 	/*
 	 * send data over a datagram service
 	 */
-	public void sendData(int ACK, int SYN, Object data, short dataLength) throws IOException{
-		TTP ttp = new TTP(ACK,SYN, data, dataLength);
-		datagram.setData(ttp);
-		dataService.sendDatagram(datagram);
-	}
-	/*
-	 * receive data
-	 * if in order, remove corresponding data from sending_buffer, to do 
-	 */
-	public void recData(TTP ttp) {
-		readTTP(ttp);
-	}
+
 	
 	
 	/*

@@ -26,7 +26,7 @@ public class ServerTTPService extends TTPservice implements Runnable{
 	private int hisACK;// ack I should reply to him now
 	private ConcurrentLinkedQueue<Datagram> request_queue;
 	private ConcurrentLinkedQueue<Datagram> data_queue;
-	private Hashtable<Integer,ConDescriptor> active_con;//record for active connections
+	private Hashtable<String, ConDescriptor> clientList;//record for active connections
 	private int mySYN;
 	private int myACK;// my coming ack is everything is good
 	private char ID;
@@ -51,7 +51,7 @@ public class ServerTTPService extends TTPservice implements Runnable{
         {
              e.printStackTrace();
         }
-		
+		clientList = new Hashtable<String, ConDescriptor>();
 		request_queue = new ConcurrentLinkedQueue<Datagram>();
 		data_queue = new ConcurrentLinkedQueue<Datagram>();
 		
@@ -61,7 +61,7 @@ public class ServerTTPService extends TTPservice implements Runnable{
 		//udpService = new DatagramService(port, 10);
 		this.dstaddr = dstaddr;
 		this.dstport = dstport;
-		active_con = new Hashtable();
+		
 		listenService = new DatagramService(srcport, 10);
 		try
         {
@@ -75,7 +75,7 @@ public class ServerTTPService extends TTPservice implements Runnable{
         {
              e.printStackTrace();
         }
-		
+		clientList = new Hashtable<String, ConDescriptor>();
 		request_queue = new ConcurrentLinkedQueue<Datagram>();
 		data_queue = new ConcurrentLinkedQueue<Datagram>();
 		
@@ -103,7 +103,7 @@ public class ServerTTPService extends TTPservice implements Runnable{
 	/*
 	 * server open port to queue incoming requests , race condition?
 	 */
-	public int serverListen(){
+	public ConDescriptor serverListen(){
 		try{
 			
 			
@@ -116,7 +116,7 @@ public class ServerTTPService extends TTPservice implements Runnable{
 				request_queue.add(datagram);
 				
 				System.out.println("request queue size "+request_queue.size());
-				int dp = serverAccept();
+				ConDescriptor dp = serverAccept();
 			    return dp;// return a connection descriptor , to do
 				}
 				else {
@@ -135,7 +135,7 @@ public class ServerTTPService extends TTPservice implements Runnable{
 		finally{
 			//listenService.close();
 		}
-		return -1;
+		return null;
 		
 	}
 	
@@ -148,7 +148,7 @@ public class ServerTTPService extends TTPservice implements Runnable{
 	 *  stays open, on the same port, listening for new connections
 	 * to do: queue?? avoid race// add lock new thread to do this?
 	 */
-	public int serverAccept() throws IOException, ClassNotFoundException{
+	public ConDescriptor serverAccept() throws IOException, ClassNotFoundException{
 		System.out.println("server accepting........");
 		    while(true){
 		    	if (request_queue.isEmpty())
@@ -187,7 +187,8 @@ public class ServerTTPService extends TTPservice implements Runnable{
 			request_queue.remove(); // can remove head from queue now
 			System.out.println("3-way finished");
 			System.out.println("request queue size "+request_queue.size());
-			return con_descriptor++;// return a connection descriptor
+			ConDescriptor oneClient= new ConDescriptor(srcaddr, datagram.getSrcaddr(), srcport, datagram.getSrcport(), ttp.getSYN());
+			clientList.put(oneClient.getKey(), oneClient);
 		}
 	}
 
