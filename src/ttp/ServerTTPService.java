@@ -6,15 +6,16 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import datatypes.Datagram;
 
 import services.DatagramService;
 
-public class ServerTTPService implements Runnable{
+public class ServerTTPService extends TTPservice implements Runnable{
 	private static DatagramService listenService;
-	private static DatagramService dataService;
+	
 	private static DatagramService clientService;
 	private final int LISTENER_MAX = 10; 
 	private int con_descriptor = 1;
@@ -25,16 +26,13 @@ public class ServerTTPService implements Runnable{
 	private int hisACK;// ack I should reply to him now
 	private ConcurrentLinkedQueue<Datagram> request_queue;
 	private ConcurrentLinkedQueue<Datagram> data_queue;
-	private HashMap<Integer,ConDescriptor> active_connections;//record for active connections
+	private Hashtable<Integer,ConDescriptor> active_con;//record for active connections
 	private int mySYN;
 	private int myACK;// my coming ack is everything is good
 	private char ID;
 	private int maximum_buffer = 10 ,MSS;
 	private HashMap sending_buffer = new HashMap();
-	private String srcaddr;
-	private String dstaddr;
-	private short srcport;
-	private short dstport;
+	
 	private short win;
 	//private HashMap rec_buffer = new HashMao();// using go back n, not needed
 	public ServerTTPService(short port) throws SocketException{
@@ -63,6 +61,7 @@ public class ServerTTPService implements Runnable{
 		//udpService = new DatagramService(port, 10);
 		this.dstaddr = dstaddr;
 		this.dstport = dstport;
+		active_con = new Hashtable();
 		listenService = new DatagramService(srcport, 10);
 		try
         {
@@ -191,18 +190,7 @@ public class ServerTTPService implements Runnable{
 			return con_descriptor++;// return a connection descriptor
 		}
 	}
- /*
-  * to do
-  * read received ttp payload, pass data to upper layer, update ACK and SYN
-  */
-	private Object readTTP(TTP ttp) {
-		// TODO Auto-generated method stub  update ack and syn
-		hisSYN = ttp.getSYN();
-		hisACK = hisSYN + ttp.getLength()+1;
-		mySYN = ttp.getACK();
-		
-		return ttp.getData();
-	}
+
 
 	/*
 	 * close datagram services
@@ -212,19 +200,8 @@ public class ServerTTPService implements Runnable{
 		dataService.close();
 		System.out.println("ttp server service closed");
 	}
-	/*
-	 * to be changed
-	 * construct response ack
-	 */
-	private Datagram constructACK(int ACK, int SYN) {
-		Datagram ack = new Datagram();
-		ack.setSrcaddr(datagram.getDstaddr());
-		ack.setSrcport(datagram.getDstport());
-		ack.setDstaddr(datagram.getSrcaddr());
-		ack.setDstport(datagram.getSrcport());
-		ack.setData("ACK");
-		return ack;
-	}
+
+	
 	
 	
 	
@@ -255,21 +232,7 @@ public class ServerTTPService implements Runnable{
 		
 	}
 
-	/*
-	 * send data over a datagram service
-	 */
-	public void sendData(int ACK, int SYN, Object data, short dataLength) throws IOException{
-		TTP ttp = new TTP(ACK,SYN, data, dataLength);
-		datagram.setData(ttp);
-		dataService.sendDatagram(datagram);
-	}
-	/*
-	 * receive data
-	 * if in order, remove corresponding data from sending_buffer, to do 
-	 */
-	public void recData(TTP ttp) {
-		readTTP(ttp);
-	}
+
 	
 	/*
 	 * to handle multiple connection simultaneously

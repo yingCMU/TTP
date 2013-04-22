@@ -12,14 +12,14 @@ import datatypes.Datagram;
 
 import services.DatagramService;
 
-public class ClientTTPService implements Runnable{
+public class ClientTTPService extends TTPservice implements Runnable{
 	
-	private static DatagramService dataService;
+	
 	private static DatagramService clientService;
 	private final int LISTENER_MAX = 10; 
 	int timer;//time out
 	private int data_length;
-	private Datagram datagram;
+	
 	private int hisSYN;// current syn
 	private int hisACK;// ack I should reply to him now
 	private ConcurrentLinkedQueue<Datagram> request_queue;
@@ -30,10 +30,7 @@ public class ClientTTPService implements Runnable{
 	private char ID;
 	private int maximum_buffer = 10 ,MSS;
 	private HashMap sending_buffer = new HashMap();
-	private String srcaddr;
-	private String dstaddr;
-	private short srcport;
-	private short dstport;
+	
 	private short win;
 	//private HashMap rec_buffer = new HashMao();// using go back n, not needed
 	public ClientTTPService(short port) throws SocketException{
@@ -81,7 +78,7 @@ public class ClientTTPService implements Runnable{
 	public void clientCon(int clientport, int ACK,  Object data, short length){
 		TTP ttpSYN = new TTP(ACK, 1, data, length);// a SYN packet
 		short size = 0;//size of datagram , to do
-		short checksum = ttpSYN.getCheckSum();
+		
 		try {
 			clientService = new DatagramService(clientport, 10);
 			/*
@@ -89,7 +86,7 @@ public class ClientTTPService implements Runnable{
 			short dstport, short size, short checksum, Object data)
 			 */
 			
-			Datagram datagram = new Datagram(srcaddr,dstaddr,srcport,dstport,size,checksum,ttpSYN);
+			Datagram datagram = constructPacket(ttpSYN);
 			System.out.println("sending SYN...");
 			clientService.sendDatagram(datagram);
 			System.out.println(" SYN . sent  next receive syn+ack");
@@ -104,8 +101,9 @@ public class ClientTTPService implements Runnable{
 						+ datagram.getSrcport());	
 			}
 			TTP ttpACK = new TTP(1, 0, data, length);
-			datagram = new Datagram(srcaddr,dstaddr,srcport,dstport,size,checksum,ttpACK);
+			datagram = constructPacket(ttpACK);
 			clientService.sendDatagram(datagram);
+			System.out.println("3-way finished");
 			
 		} catch (SocketException e) {
 			// TODO Auto-generated catch block
@@ -156,16 +154,7 @@ public class ClientTTPService implements Runnable{
 		return ttpPacket;
 	}
 	*/
-	private Datagram constructPacket(TTP ttp, String srcaddr, Short srcport, String destaddr, Short destport ){
-		Datagram gram = new Datagram();
-		gram.setData(ttp);
-		gram.setSrcaddr(srcaddr);
-		gram.setDstaddr(destaddr);
-		gram.setDstport(destport);
-		gram.setSrcport(srcport);
-		return gram;
-		
-	}
+	
 
 	/*
 	 * send data over a datagram service
@@ -183,18 +172,7 @@ public class ClientTTPService implements Runnable{
 		readTTP(ttp);
 	}
 	
-	/*
-	  * to do
-	  * read received ttp payload, pass data to upper layer, update ACK and SYN
-	  */
-		private Object readTTP(TTP ttp) {
-			// TODO Auto-generated method stub  update ack and syn
-			hisSYN = ttp.getSYN();
-			hisACK = hisSYN + ttp.getLength()+1;
-			mySYN = ttp.getACK();
-			
-			return ttp.getData();
-		}
+	
 	/*
 	 * to handle multiple connection simultaneously
 	 */
@@ -250,7 +228,7 @@ public class ClientTTPService implements Runnable{
 	 */
 	public void closeService(){
 		clientService.close();
-		dataService.close();
+		//dataService.close();
 		System.out.println("ttp server service closed");
 	}
 
