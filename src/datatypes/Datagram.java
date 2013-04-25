@@ -8,6 +8,7 @@ import java.io.Serializable;
 
 
 // Format of datagram packet
+@SuppressWarnings("serial")
 public class Datagram implements Serializable {
 	
 	// Source IP address

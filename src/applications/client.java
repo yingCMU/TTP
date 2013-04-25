@@ -27,7 +27,7 @@ public class client {
 		System.out.println("Starting client ...");
 		
 		int port = Integer.parseInt(args[0]);
-		ds = new DatagramService(port, 10);
+		ds = new DatagramService(10);
 		
 		Datagram datagram = new Datagram();
 		datagram.setData("Hello World!");

@@ -5,12 +5,8 @@
 package TTPApplication;
 
 import java.io.IOException;
-import java.net.SocketException;
-
-import services.DatagramService;
 import ttp.ClientTTPService;
 import ttp.TTP;
-import ttp.ServerTTPService;
 import datatypes.Datagram;
 
 public class TTPclient {
@@ -53,21 +49,11 @@ public class TTPclient {
 		 * TTPService(short srcport, short dstport, String dstaddr)
 		 */
 		System.out.println("ttp service dstport "+dstport);
-		ttps = new ClientTTPService((short) srcport,(short)dstport, "localhost");
+		ttps = new ClientTTPService("localhost", (short) srcport);
 		
-		ttps.clientCon( 1, ttp,ttp.getLength());
-		//ttps.recData();
-		ttps.sendData("hello", (short ) 4);
-		System.out.println("client and server connection established");
-		ttps.closeService();
-		//datagram = ds.receiveDatagram();
-		//System.out.println("Received " + datagram.getData());
-		/*ds.sendDatagram(datagram);
-		System.out.println("Sent datagram");
+		ttps.connect("localhost", (short)dstport);
+		ttps.receiveData();
 		
-		datagram = ds.receiveDatagram();
-		System.out.println("Received " + datagram.getData());
-		*/
 	}
 	
 	private static void printUsage() {

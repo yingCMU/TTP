@@ -6,25 +6,25 @@ import java.io.Serializable;
  * TTP layer  header and data which goes into the UDP layer payload
  * padding 
  * */
+@SuppressWarnings("serial")
 public class TTP implements Serializable{
 	
-	//16 bit
 	final private char SYNFLAG = 1;
 	final private char ACKFLAG = 2;
 	final private char FINFLAG = 3;
 	private short windowSize;
-	//32 bit
+
 	private int SYN;//sequence number
-	//32 bit
+
 	private int ACK;
-	//private Pseudo Pseudo_Header;
-	private short checkSum;
-	private Object data;//?
+	private Object data;//
 	private char offset;//for fragment in unit of 8
 	private char ID;
 	short fragment_length;// for each fragmented message 
 	private short length;// for each fragmented message 
 	private char flag;//indicate whether has more fragment
+	
+	private char category;
 	
 	public TTP() {
 		offset = 0;
@@ -32,20 +32,21 @@ public class TTP implements Serializable{
 		flag = 0;
 		fragment_length = 0;
 	}
-	/*
-	 * construct response ttp packet to be sent, update ack and syn
-	 */
-	public TTP(int ACK, int SYN, Object data,short length, boolean isSYN){
+
+	public TTP(int ACK, int SYN, Object data, short length, char category){
 		this.ACK = ACK;
 		this.length = length;
 		this.SYN = SYN;
 		this.data = data;
 		
+		this.category = category;
+		
 		offset = 0;
 		ID = 0;
-		if(isSYN)
-		setSYNFlag();
-		fragment_length = 0;
+		if(category == 0) {
+			setSYNFlag();
+			fragment_length = 0;
+		}
 	}
 	
 	public int getWSize() {
@@ -83,7 +84,6 @@ public class TTP implements Serializable{
 	
 	
 	public void setCheckSum(short checkSum) {
-		this.checkSum = checkSum;
 	}
 	
 	public char getOffset() {
@@ -144,10 +144,7 @@ public class TTP implements Serializable{
 		checkSum += (short) getID();
 		checkSum += (short) getFragLength();
 		checkSum += (short) getFlag();
-		return (short)checkSum;
-		
-		
-		
+		return (short)checkSum;	
 	}
 
 	public boolean isSYN() {
@@ -175,6 +172,10 @@ public class TTP implements Serializable{
 
 	public void setLength(short length) {
 		this.length = length;
+	}
+	
+	public char getCategory() {
+		return category;
 	}
 	
 }

@@ -1,297 +1,98 @@
 package ttp;
 
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.SocketException;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-
 import datatypes.Datagram;
 
-import services.DatagramService;
-
-public class ClientTTPService extends TTPservice implements Runnable{
+public class ClientTTPService extends TTPservice{
 	
+	private String dstaddr;
+	private short dstport;
+	private int SYN;
+	private int expectSYN;
+	private int ACK;
 	
-	private static DatagramService clientService;
-	private final int LISTENER_MAX = 10; 
-	int timer;//time out
-	private int data_length;
-	private int serverSYN;// current syn
-	private int serverACK;// ack I should reply to him now
-	private int clientSYN;
-	private int clientACK;// my coming ack is everything is good
-	String dstaddr;
-	short dstport;
+	private boolean isConnected;
 	
-	private ConcurrentLinkedQueue<Datagram> request_queue;
-	private ConcurrentLinkedQueue<Datagram> data_queue;
+	private Timer timer;
 	
-	private char ID;
-	private int maximum_buffer = 10 ;
-	private HashMap sending_buffer = new HashMap();
+	private String data;
 	
+	public ClientTTPService(String srcaddr, short srcPort){
+		super(srcaddr, srcPort);
+		SYN = 0;
+		ACK = 0;
+		isConnected = false;
+		
+		data = "Hello Server";
+	}
 	
-	//private HashMap rec_buffer = new HashMao();// using go back n, not needed
-	
-	public ClientTTPService(short srcport, short dstport, String dstaddr) throws SocketException{
-		clientService = new DatagramService(srcport, 10);
+	public void connect (String dstaddr, short dstPort) {
+		System.out.println("Connecting......");
 		this.dstaddr = dstaddr;
-		this.dstport = dstport;
-		try
-        {
-            InetAddress addr = InetAddress.getLocalHost();
-            String hostname = addr.getHostName();
-           // System.out.println(addr.getHostAddress());
-            //System.out.println(hostname);
-            this.srcport = srcport;//client
-    		this.srcaddr = addr.getHostAddress();
-        }catch(UnknownHostException e)
-        {
-             e.printStackTrace();
-        }
+		this.dstport = dstPort;
 		
-		request_queue = new ConcurrentLinkedQueue<Datagram>();
-		data_queue = new ConcurrentLinkedQueue<Datagram>();
-		
-	}
-	
-	
-	/*
-	 * start a new connection
-	 * 3-way handshakes
-	 *  Host A sends a TCP SYNchronize packet to Host B
-	 *	Host B receives A's SYN
-	 *	Host B sends a SYNchronize-ACKnowledgement
-	 *	Host A receives B's SYN-ACK
-	 *	Host A sends ACKnowledge
- 	 *	Host B receives ACK. 
-	 *	TCP socket connection is ESTABLISHED.
-	 
-	
-	*/
-	public void clientCon( int ACK,  Object data, short length){
-		TTP ttpSYN = new TTP(ACK, 1, data, length,true);// a SYN packet
-		short size = 0;//size of datagram , to do
-		
-		try {
+		while(true) {
+			System.out.println("Sending SYN data");
+			clientSendData(null, (short)0, (char)0);//SYN
 			
-			/*
-			 * Datagram(String srcaddr, String dstaddr, short srcport,
-			short dstport, short size, short checksum, Object data)
-			 */
+			Datagram datagram = receiveData();
+			System.out.println("Receiving server ACK");
 			
-			Datagram datagram = constructPacket(ttpSYN,dstaddr,dstport);
-			System.out.println("sending SYN...");
-			clientService.sendDatagram(datagram);
-			System.out.println(" SYN . sent  next receive syn+ack");
-			datagram = clientService.receiveDatagram();//a new thread to handle? incoming queue?
-			if( ( (TTP) datagram.getData()).isACK() ){
-			System.out.println("3-way  ACK from server ip "+ datagram.getSrcaddr() + ":" 
-					+ datagram.getSrcport() + " Data: " + datagram.getData());
-		    
-			}
-			else{
-				System.out.println("clientcon: received invalid packet from ip "+ datagram.getSrcaddr() + ":" 
-						+ datagram.getSrcport());	
-			}
-			TTP ttpACK = new TTP(1, 0, data, length,false);
-			datagram = constructPacket(ttpACK,dstaddr,dstport);
-			clientService.sendDatagram(datagram);
-			System.out.println("3-way finished");
-			
-		} catch (SocketException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		finally{
-			//clientService.close();
-		}
-	}
-	
-	
-	/*
-	 * send data over a datagram service
-	 */
-	public void sendData( Object data, short dataLength) {
-		
-		TTP ttp = new TTP(serverACK,clientSYN, data, dataLength,false);
-		System.out.println("@@@@client sending data ACK-"+serverACK + "; SYN -"+clientSYN);
-		Datagram datagram = constructPacket(ttp,dstaddr,dstport);
-		
-		try {
-			clientService.sendDatagram(datagram);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	/*
-	 * receive data
-	 * if in order, remove corresponding data from sending_buffer, to do 
-	 */
-	public void recData() {
-		Datagram datagram;
-		try {
-			System.out.println("client rec data.......");
-			datagram = clientService.receiveDatagram();
+			timer.interrupt();
 			
 			TTP ttp = (TTP)datagram.getData();
-			System.out.println("@@@@client receiving data ACK-"+ttp.getACK() + "; SYN -"+ttp.getSYN());
-			clientSYN = ttp.getACK();
-			serverACK = ttp.getSYN()+ttp.getLength();
-			readTTP(ttp);
-			System.out.println("received paload data: "+ttp.getData());
+			int ack = ttp.getACK();
 			
-		} catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.out.println("ACK: " + ack + " ExpectSYN: " + expectSYN);
 			
-		}
-		
-	}
-	/*
-	 * to check if receved SYN is in window, 
-	 * @argument recSYN: received SYN
-	 * curSYN : current SYN 
-	 */
-	private boolean inWindow(int recSYN, int curSYN ){
-		 return (recSYN <= curSYN + win);
-	 }
-	/*
-	 * to be changed
-	 * construct response ack
-	 */
-	private Datagram constructACK(int ACK, int SYN) {
-		Datagram ack = new Datagram();
-		ack.setSrcaddr(srcaddr);
-		ack.setSrcport(srcport);
-		ack.setDstaddr(dstaddr);
-		ack.setDstport(dstport);
-		ack.setData("ACK");
-		return ack;
-	}
-	
-	
-	
-	/*
-	private TTP construct_ttpPacket(Object data, short dataLength){
-		TTP ttpPacket = new TTP();;
-		ttpPacket.setData(data);
-		ttpPacket.setFragmentLength(dataLength);
-		
-		ttpPacket.setSYN(SYN);
-		SYN += dataLength;
-		ttpPacket.setACK(ACK);
-		
-		ttpPacket.setOffset((char)0);
-		ttpPacket.setID((char)0);
-		ttpPacket.setFlag((char)0);
-		return ttpPacket;
-	}
-	*/
-	
-
-	/*
-	 * send data over a datagram service
-	 */
-
-	
-	
-	/*
-	 * to handle multiple connection simultaneously
-	 */
-	public void mulCon(){
-		
-	}
-	/*
-	 * if out of order or time out, get data from send buffer and retransmit
-	 * 
-	 */
-	public void retransmit(int time){
-		
-	}
-	/*
-	 * for situations where transfer large datagrams
-	 */
-	static void split(){
-		
-	}
-	static void segment(){
-		
-	}
-	static void reassemble(){
-		
-	}
-	/*
-	 * Sender has to buffer all unacknowledged packets,(up to N) because they may require 
-	 * retransmission.Receiver may be able to accept out-of-order packets, 
-	 * but only up to its buffer limits.The sender needs to set timers in 
-	 * order to know when to retransmit a packet that may have been lost
-	 * ß Sender Window: Keeps track of SNs for frames that have been sent 
-	 * but not yet acknowledged.
-	 * ß Receiver Window: Keeps track of sequence numbers for frames 
-	 * that the receiver is allowed to accept With maximum window size of 1, 
-	 * the sender waits for an ACK before sending another frame.ß With maximum window 
-	 * size of WS, the sender can transmit up to WS frames before being blocked.
-	 * - allows sender to transmit several frames before receiving an ACK
-	 * - also a form of “pipelining” => keeps the link from being idle
-
-	 */
-	private static void goBackN(){
-		
-	}
-	
-	static void checkDup(TTP in){
-		
-	}
-	static void checkSum(){
-		
-	}
-	static void checkDelayed(TTP in){
-		
-	}
-	static void checkDroped(){
-		
-	}
-
-	@Override
-	public void run() {
-		// TODO Auto-generated method stub
-		
-	}
-	/*
-	 * close datagram services
-	 */
-	public void closeService(){
-		clientService.close();
-		//dataService.close();
-		System.out.println("ttp server service closed");
-	}
-
-	
-	/* multithread for application layer
-	private class Acceptor implements Runnable {
-
-		public void run() {
-			try {
-				Socket s = serverSocket.accept();
-			} catch(IOException ioe) {
-				ioe.printStackTrace();
+			if (ttp.getCategory() == (char)1 && ack == expectSYN) {
+				
+				System.out.println("Sending SYN + ACK");
+				
+				ACK = ttp.getSYN() + ttp.getLength();
+				SYN = expectSYN;
+				
+				clientSendData(null, (short)0, (char)2); //SYN + ACK
+				isConnected = true;
+				System.out.println("connectioin established");
+				break;
 			}
 		}
-
+		System.out.println("Client connecting end");
 	}
-	*/
+
+	public void clientSendData(Object data, short dataLength, char category) {
+		timer = sendData(ACK, SYN, dstaddr, dstport, data, dataLength, category);
+		expectSYN = SYN + dataLength;
+	}
+	
+	public void clientSendData(Object data, short dataLength) {
+		timer = sendData(ACK, SYN, dstaddr, dstport, data, dataLength, (char)3);
+		
+		expectSYN = SYN + dataLength;
+	}
+
+	public void clientReceiveData() {
+		if (isConnected) {
+			Datagram datagram = receiveData();
+			TTP ttp = (TTP)datagram.getData();
+			int ack = ttp.getACK();
+			
+			timer.interrupt();
+			System.out.println("Timer alive: " + timer.isAlive());
+			
+			if (ttp.getCategory() == (char)3 && ack == expectSYN) {
+
+				ACK = ttp.getSYN() + ttp.getLength();
+				SYN = expectSYN;
+				
+				clientSendData(null, (short)0, (char)3); //SYN + ACK
+				
+				System.out.println("connectioin established");
+			} else {
+				clientSendData(data, (short)data.length());
+			}
+		} else {
+			System.out.println("Please establish the connection first");
+		}
+	}
 }

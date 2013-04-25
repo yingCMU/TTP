@@ -3,19 +3,14 @@
  */
 package TTPApplication;
 
-import java.io.IOException;
-import java.net.SocketException;
-
-import services.DatagramService;
-import ttp.ConDescriptor;
 import ttp.ServerTTPService;
-import datatypes.Datagram;
+
 
 public class TTPserver {
 
 	private static ServerTTPService service;
 	
-	public static void main(String[] args) throws IOException, ClassNotFoundException {
+	public static void main(String[] args){
 
 		if(args.length != 1) {
 			printUsage();
@@ -24,35 +19,9 @@ public class TTPserver {
 		System.out.println("Starting Server ...");
 		
 		int port = Integer.parseInt(args[0]);
-		service = new ServerTTPService((short)port);
+		service = new ServerTTPService("localhost", (short)port);
 		while(true){
-		ConDescriptor dp = service.serverListen();
-		System.out.println("ttp server receiving data");
-		service.recData();
-			//service.sendData(0, dp, "hello word", (short)2);
-			//System.out.println(" data sent" );	
-		}
-		//service.serverAccept();
-		//run();
-	}
-
-	private static void run() throws IOException, ClassNotFoundException {
-
-		Datagram datagram;
-		
-		while(true) {
-			
-			 
-			/*datagram = ds.receiveDatagram();
-			System.out.println("Received datagram from " + datagram.getSrcaddr() + ":" + datagram.getSrcport() + " Data: " + datagram.getData());
-			Datagram ack = new Datagram();
-			ack.setSrcaddr(datagram.getDstaddr());
-			ack.setSrcport(datagram.getDstport());
-			ack.setDstaddr(datagram.getSrcaddr());
-			ack.setDstport(datagram.getSrcport());
-			ack.setData("ACK");
-			ds.sendDatagram(ack);
-			*/
+			service.serverListen();
 		}
 	}
 

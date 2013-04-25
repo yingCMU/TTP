@@ -23,31 +23,11 @@ import datatypes.Datagram;
 
 public class DatagramService {
 
-	private int port;
-	private String srcaddr;
-	private int verbose;
 	private DatagramSocket socket;
 
-	public DatagramService(int port, int verbose) throws SocketException {
+	public DatagramService(int port) throws SocketException {
 		super();
-		this.port = port;
-		this.verbose = verbose;
-       try{
-		socket = new DatagramSocket(port);
-       }
-       catch(BindException e){
-    	   e.printStackTrace();
-    	   System.out.println("port: "+port);
-       }
-		
-	}
-
-	public DatagramService(String srcaddr,int port, int verbose) throws SocketException {
-		super();
-		this.srcaddr = srcaddr;
-		this.port = port;
-		this.verbose = verbose;
-       try{
+		try{
 		socket = new DatagramSocket(port);
        }
        catch(BindException e){
@@ -89,6 +69,7 @@ public class DatagramService {
 
 		return datagram;
 	}
+	
 	public void close(){
 		socket.close();
 	}

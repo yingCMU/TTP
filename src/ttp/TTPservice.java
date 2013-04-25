@@ -1,49 +1,64 @@
 package ttp;
 
 import java.io.IOException;
-
+import java.net.SocketException;
 import datatypes.Datagram;
 
 import services.DatagramService;
 
 
 public abstract class TTPservice {
-	static DatagramService dataService;
+	 protected String srcaddr;
+	 protected short srcPort;
 	 
-	 String srcaddr;
-	
-	 short srcport;
-	
-	 short MSS = 563;
-	 final  short win = 128;// go back n window size
-		
-		
-	
-	/*
-	  * to do
-	  * read received ttp payload, pass data to upper layer, update ACK and SYN
-	  */
-		 Object readTTP(TTP ttp) {
-			// TODO Auto-generated method stub  update ack and syn
-			/*hisSYN = ttp.getSYN();
-			hisACK = hisSYN + ttp.getLength()+1;
-			mySYN = ttp.getACK();
-			
-			return ttp.getData();*/
-			return null;
-		}
-		 Datagram constructPacket(TTP ttp, String dstaddr, short dstport ){
-			short checksum = ttp.getCheckSum();
-			short size = 0;// size of datagram, to do 
-			/*
-			 * Datagram(String srcaddr, String dstaddr, short srcport,
-				short dstport, short size, short checksum, Object data)
-			 */
-			Datagram gram = new Datagram(srcaddr,dstaddr,srcport,dstport,size,checksum,ttp);
-			
-			return gram;
-			
-		}
+	 protected int windowSize;
+	 
+	 private short TTPHeaderLength;
+	 
+	 private DatagramService datagramService;
+	 
+	 public TTPservice(String srcaddr, short srcPort) {
+		 this.srcaddr = srcaddr;
+		 this.srcPort = srcPort;
+
+		 TTPHeaderLength = 0;
 		 
+		 windowSize = 5;
 		 
+		 try {
+			 datagramService = new DatagramService(srcPort);
+		 } catch (SocketException e) {
+			 System.out.println("TTP Service construction exception");
+		 }
+	 }
+	 
+	 public Timer sendData (int ACK, int SYN, String dstaddr, short dstPort, 
+			 			  Object data, short dataLength, char category) {
+		TTP ttp = new TTP(ACK, SYN, data, dataLength, category);
+		Datagram datagram = new Datagram(srcaddr, dstaddr, srcPort, dstPort, 
+							(short)(dataLength + TTPHeaderLength), ttp.getCheckSum(), ttp);
+		
+		System.out.println("Sending data to " + datagram.getDstaddr() + ":" 
+							+ datagram.getDstport());
+		
+		Timer sendWithTimer = new Timer(20000, datagram, datagramService);	
+		sendWithTimer.start();
+		return sendWithTimer;
+	}
+		
+	public Datagram receiveData () {
+		try {
+			return datagramService.receiveDatagram();
+		} catch (ClassNotFoundException e) {
+			System.out.println("TTP Service receiveData exception");
+		} catch (IOException e) {
+			System.out.println("TTP Service receiveData exception");
+		} 
+		return null;
+	}
+	
+	public void closeService() {
+		datagramService.close();
+		System.out.println("TTP Service Closed");
+	}
 }

@@ -4,21 +4,26 @@ package ttp;
 
 public class ConDescriptor {
 	private String serveraddr;
-	 String clientaddr;
+	String clientaddr;
 	private short serverport;
-	 short clientport;
+	short clientport;
 	private int serverSYN;
-	private int clientSYN;
+	private int expectSYN;
+	private int ACK;
+	private boolean connected;
 	
 	private Timer timer;
 	
-	public ConDescriptor(String serveraddr, String clientaddr, short serverport, short clientport, int serverSYN, int clientSYN){
+	public ConDescriptor(String serveraddr, String clientaddr, short serverport, 
+						 short clientport, int clientSYN){
 		this.serveraddr = serveraddr;
 		this.clientaddr = clientaddr;
 		this.serverport = serverport;
 		this.clientport = clientport;
-		this.serverSYN = serverSYN;
-		this.clientSYN = clientSYN;
+		
+		serverSYN = 0;
+		
+		connected = false;
 		
 	}
 	
@@ -33,6 +38,30 @@ public class ConDescriptor {
 	public String getKey() {
 		return clientaddr + clientport;
 	}
+	
+	public boolean isConnected() {
+		return connected;
+	}
+	
+	public void setConnected(boolean status) {
+		connected = status;
+	}
+	
+	public String getServerAddr() {
+		return serveraddr;
+	}
+	
+	public String getClientAddr() {
+		return clientaddr;
+	}
+	
+	public short getServerPort() {
+		return serverport;
+	}
+	
+	public short getClientPort() {
+		return clientport;
+	}
 
 
 	public void setTimer(Timer timer) {
@@ -40,17 +69,17 @@ public class ConDescriptor {
 	}
 	
 	public void killTimer() {
-		if (timer != null && timer.getSendCount() > 0) {
+		if (timer != null && timer.isAlive()) {
 			timer.interrupt();
 		}
 	}
 
-	public int getClientSYN() {
-		return clientSYN;
+	public int getACK() {
+		return ACK;
 	}
 
-	public void setClientSYN(int clientSYN) {
-		this.clientSYN = clientSYN;
+	public void setACK(int ACK) {
+		this.ACK = ACK;
 	}
 
 	public int getServerSYN() {
@@ -59,5 +88,13 @@ public class ConDescriptor {
 
 	public void setServerSYN(int serverSYN) {
 		this.serverSYN = serverSYN;
+	}
+	
+	public int getExpectSYN() {
+		return expectSYN;
+	}
+	
+	public void setExpectSYN(int syn) {
+		expectSYN = syn;
 	}
 }

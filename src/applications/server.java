@@ -22,7 +22,7 @@ public class server {
 		System.out.println("Starting Server ...");
 		
 		int port = Integer.parseInt(args[0]);
-		ds = new DatagramService(port, 10);
+		ds = new DatagramService(10);
 		
 		run();
 	}

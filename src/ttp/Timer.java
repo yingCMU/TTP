@@ -1,7 +1,6 @@
 package ttp;
 
 import java.io.IOException;
-
 import services.DatagramService;
 import datatypes.Datagram;
 
@@ -22,14 +21,18 @@ public class Timer extends Thread implements Runnable{
 	@Override
 	public void run() {
 		// TODO Auto-generated method stub
-		while(sendCount > 0) {
+		while(sendCount > 0 && !Thread.interrupted()) {
 			
 			try {
+				TTP ttp = (TTP)data.getData();
+				int category = (int)ttp.getCategory();
+				System.out.println("Sending data Category: " + category);
 				datagramService.sendDatagram(data);
 				Thread.sleep(time);
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
-				System.out.println("Time Exception");
+				System.out.println("Timer Interupted");
+				break;
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				System.out.println("sending Exception");
@@ -37,10 +40,8 @@ public class Timer extends Thread implements Runnable{
 			
 			sendCount--;
 		}
+		
+		System.out.println("Thread killed");
+		
 	}
-	
-	public synchronized int getSendCount() {
-		return sendCount;
-	}
-
 }
